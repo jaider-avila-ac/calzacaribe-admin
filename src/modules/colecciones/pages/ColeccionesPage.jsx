@@ -23,10 +23,10 @@ export default function ColeccionesPage() {
   const [search,      setSearch]      = useState('')
 
   useEffect(() => {
-    Promise.all([coleccionService.getAll(), productService.getAll()])
+    Promise.all([coleccionService.getAll(), productService.getAll({ size: 500 })])
       .then(([cols, prods]) => {
         setColecciones(Array.isArray(cols) ? cols : [])
-        setProductos(Array.isArray(prods) ? prods : [])
+        setProductos(Array.isArray(prods?.content) ? prods.content : [])
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -203,7 +203,7 @@ export default function ColeccionesPage() {
                   return (
                     <button key={p.id} type="button" onClick={() => toggleProducto(p.id)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-gray-50 last:border-0
-                        ${selected ? 'bg-lime-50' : 'hover:bg-gray-50'}`}>
+                        ${selected ? 'bg-admin-accent-subtle' : 'hover:bg-gray-50'}`}>
                       <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors
                         ${selected ? 'bg-black border-black' : 'border-gray-300'}`}>
                         {selected && <Check size={10} className="text-white" />}

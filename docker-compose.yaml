@@ -1,0 +1,21 @@
+name: calzacaribe-admin
+
+services:
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    image: calzacaribe-admin
+    container_name: calzacaribe-admin
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - default
+      - coolify
+
+networks:
+  coolify:
+    external: true

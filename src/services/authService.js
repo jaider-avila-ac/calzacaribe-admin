@@ -1,4 +1,4 @@
-const API = 'http://localhost:8080/api/v1'
+const API = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1`
 const TOKEN_KEY = 'calzacaribe_admin_token'
 const USER_KEY  = 'calzacaribe_admin_user'
 
@@ -6,7 +6,7 @@ export const authService = {
   login: async (email, password) => {
     const res = await fetch(`${API}/auth/admin/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': '1' },
       body: JSON.stringify({ email, password }),
     })
     if (!res.ok) {
@@ -15,7 +15,7 @@ export const authService = {
     }
     const data = await res.json()
     localStorage.setItem(TOKEN_KEY, data.token)
-    localStorage.setItem(USER_KEY, JSON.stringify({ email: data.email, nombre: data.nombre }))
+    localStorage.setItem(USER_KEY, JSON.stringify({ email: data.email, nombre: data.nombre, rol: data.rol }))
     return data
   },
 
@@ -45,6 +45,10 @@ export const authService = {
       },
     })
     if (!res.ok) throw new Error('invalid')
-    return res.json()
+    const data = await res.json()
+    // Refresca nombre/rol guardados por si cambiaron desde el último login (ej. un superadmin
+    // le cambió el rol a este usuario en otra sesión).
+    localStorage.setItem(USER_KEY, JSON.stringify({ email: data.email, nombre: data.nombre, rol: data.rol }))
+    return data
   },
 }

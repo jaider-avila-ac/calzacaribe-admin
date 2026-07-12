@@ -26,5 +26,10 @@ export function useOrders() {
     load()
   }
 
-  return { orders, loading, error, reload: load, updateEstado }
+  const resolverAlertaStock = async (id) => {
+    await orderService.resolverAlertaStock(id)
+    load()
+  }
+
+  return { orders, loading, error, reload: load, updateEstado, resolverAlertaStock }
 }

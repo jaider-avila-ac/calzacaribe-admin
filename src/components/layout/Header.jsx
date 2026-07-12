@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Plus, LogOut, Menu } from 'lucide-react'
+import { Plus, LogOut, Menu } from 'lucide-react'
 import { authService } from '../../services/authService'
+import NotificationBell from './NotificationBell'
 
 const PAGE_TITLES = {
   '/dashboard':     { title: 'Dashboard',     subtitle: 'Resumen general de la tienda'    },
@@ -52,10 +53,7 @@ export default function Header({ onMenuClick }) {
       </div>
 
       {/* Notifications */}
-      <button className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
-        <Bell size={18} className="text-gray-600" />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-600 rounded-full" />
-      </button>
+      <NotificationBell />
 
       {/* Action button */}
       {action && (
@@ -71,7 +69,7 @@ export default function Header({ onMenuClick }) {
       {/* User + logout */}
       {user && (
         <div className="flex items-center gap-2 pl-2 border-l border-gray-100 flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-lime-300 text-xs font-bold flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {user.nombre?.charAt(0)?.toUpperCase() ?? 'A'}
           </div>
           <span className="text-xs font-semibold text-black hidden lg:block">{user.nombre}</span>

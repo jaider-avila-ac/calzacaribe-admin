@@ -1,12 +1,33 @@
-import { useState } from 'react'
-import { AlertTriangle, Edit2, Check, X, Search } from 'lucide-react'
+import { Fragment, useMemo, useState } from 'react'
+import { AlertTriangle, ChevronRight, Edit2, Check, X, Search } from 'lucide-react'
 import { useInventory } from '../hooks/useInventory'
 import Badge from '../../../components/ui/Badge'
 
 function StockStatus({ estadoStock }) {
   if (estadoStock === 'agotado') return <Badge variant="danger"><AlertTriangle size={10} className="mr-1 inline" />Agotado</Badge>
-  if (estadoStock === 'bajo')    return <Badge variant="warning">Stock bajo</Badge>
+  if (estadoStock === 'bajo')    return <Badge variant="danger">Stock bajo</Badge>
   return <Badge variant="success">Disponible</Badge>
+}
+
+const ESTADO_PRIORIDAD = { agotado: 2, bajo: 1, disponible: 0 }
+
+/** Agrupa las variantes planas por producto para la tabla en árbol (producto → variantes). */
+function agruparPorProducto(items) {
+  const grupos = new Map()
+  for (const item of items) {
+    if (!grupos.has(item.prd_id)) {
+      grupos.set(item.prd_id, { prd_id: item.prd_id, nombre: item.nombre, marca: item.marca, variantes: [] })
+    }
+    grupos.get(item.prd_id).variantes.push(item)
+  }
+  return Array.from(grupos.values()).map((g) => ({
+    ...g,
+    totalStock: g.variantes.reduce((sum, v) => sum + Number(v.stock ?? 0), 0),
+    estado_stock: g.variantes.reduce(
+      (peor, v) => ESTADO_PRIORIDAD[v.estado_stock] > ESTADO_PRIORIDAD[peor] ? v.estado_stock : peor,
+      'disponible'
+    ),
+  }))
 }
 
 export default function InventoryPage() {
@@ -14,12 +35,18 @@ export default function InventoryPage() {
   const [editing, setEditing] = useState(null)
   const [editVal, setEditVal] = useState('')
   const [search,  setSearch]  = useState('')
+  const [expandidoId, setExpandidoId] = useState(null)
 
   const filtered = items.filter((it) =>
     (it.nombre ?? '').toLowerCase().includes(search.toLowerCase()) ||
     (it.talla  ?? '').toLowerCase().includes(search.toLowerCase()) ||
     (it.color  ?? '').toLowerCase().includes(search.toLowerCase())
   )
+
+  const grupos = useMemo(() => agruparPorProducto(filtered), [filtered])
+  const buscando = search.trim().length > 0
+
+  const toggleGrupo = (prdId) => setExpandidoId((actual) => actual === prdId ? null : prdId)
 
   const startEdit   = (item) => { setEditing(item.var_id); setEditVal(String(item.stock)) }
   const confirmEdit = (item) => {
@@ -38,9 +65,9 @@ export default function InventoryPage() {
           <p className="text-3xl font-black text-black mt-1">{resumen?.total_stock ?? '—'}</p>
           <p className="text-xs text-gray-400 mt-0.5">unidades (variantes activas)</p>
         </div>
-        <div className="stat-card text-center border-l-4 border-yellow-400">
+        <div className="stat-card text-center border-l-4 border-red-500">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock bajo</p>
-          <p className="text-3xl font-black text-yellow-600 mt-1">{resumen?.bajo_stock ?? '—'}</p>
+          <p className="text-3xl font-black text-red-600 mt-1">{resumen?.bajo_stock ?? '—'}</p>
           <p className="text-xs text-gray-400 mt-0.5">variantes con stock ≤ 5</p>
         </div>
         <div className="stat-card text-center border-l-4 border-red-500">
@@ -65,9 +92,26 @@ export default function InventoryPage() {
 
       {/* Table */}
       <div className="section-card">
-        <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-black">Control de inventario por variante</h2>
-          <p className="text-xs text-gray-400">Haz clic en el ícono de edición para modificar el stock</p>
+        <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-black">Control de inventario por producto</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Haz clic en un producto para ver/ocultar sus variantes</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setExpandidoId(grupos[0]?.prd_id ?? null)}
+              className="text-xs font-semibold text-gray-500 hover:text-black transition-colors"
+            >
+              Expandir todo
+            </button>
+            <span className="text-gray-200">|</span>
+            <button
+              onClick={() => setExpandidoId(null)}
+              className="text-xs font-semibold text-gray-500 hover:text-black transition-colors"
+            >
+              Contraer todo
+            </button>
+          </div>
         </div>
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">Cargando...</div>
@@ -84,69 +128,102 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map((item) => (
-                <tr
-                  key={item.var_id}
-                  className={`hover:bg-gray-50 transition-colors ${
-                    item.estado_stock === 'agotado' ? 'bg-red-50/30' :
-                    item.estado_stock === 'bajo'    ? 'bg-yellow-50/30' : ''
-                  }`}
-                >
-                  <td className="table-cell px-5">
-                    <p className="font-semibold text-black text-sm">{item.nombre}</p>
-                  </td>
-                  <td className="table-cell px-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-gray-100 text-xs font-bold text-black">
-                      {item.talla}
-                    </span>
-                  </td>
-                  <td className="table-cell px-4">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
-                        style={{ backgroundColor: item.color_hex }}
-                      />
-                      <span className="text-sm text-gray-600">{item.color}</span>
-                    </div>
-                  </td>
-                  <td className="table-cell px-4 text-gray-500">{item.marca ?? '-'}</td>
-                  <td className="table-cell px-4 text-center">
-                    {editing === item.var_id ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <input
-                          type="number"
-                          value={editVal}
-                          onChange={(e) => setEditVal(e.target.value)}
-                          className="w-20 text-center border border-black rounded-lg px-2 py-1 text-sm font-bold focus:outline-none"
-                          autoFocus
-                          min={0}
-                        />
-                        <button onClick={() => confirmEdit(item)} className="p-1 rounded-lg bg-lime-300 text-black hover:bg-lime-400 transition-colors">
-                          <Check size={14} />
-                        </button>
-                        <button onClick={cancelEdit} className="p-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2">
-                        <span className={`text-lg font-black ${
-                          item.estado_stock === 'agotado' ? 'text-red-600' :
-                          item.estado_stock === 'bajo'    ? 'text-yellow-600' : 'text-black'
-                        }`}>
-                          {item.stock}
-                        </span>
-                        <button onClick={() => startEdit(item)} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
-                          <Edit2 size={13} />
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                  <td className="table-cell px-4 text-center">
-                    <StockStatus estadoStock={item.estado_stock} />
-                  </td>
-                </tr>
-              ))}
+              {grupos.map((g) => {
+                const expandido = buscando || expandidoId === g.prd_id
+                return (
+                  <Fragment key={g.prd_id}>
+                    {/* Fila de producto (nivel 1) — clic para expandir/contraer sus variantes */}
+                    <tr
+                      onClick={() => toggleGrupo(g.prd_id)}
+                      className="bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer select-none"
+                    >
+                      <td className="table-cell px-5">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight
+                            size={14}
+                            className={`text-gray-400 flex-shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}`}
+                          />
+                          <p className="font-bold text-black text-sm">{g.nombre}</p>
+                          <span className="text-xs text-gray-400">
+                            ({g.variantes.length} {g.variantes.length === 1 ? 'variante' : 'variantes'})
+                          </span>
+                        </div>
+                      </td>
+                      <td className="table-cell px-4" colSpan={2} />
+                      <td className="table-cell px-4 text-gray-500">{g.marca ?? '-'}</td>
+                      <td className="table-cell px-4 text-center">
+                        <span className="text-lg font-black text-black">{g.totalStock}</span>
+                      </td>
+                      <td className="table-cell px-4 text-center">
+                        <StockStatus estadoStock={g.estado_stock} />
+                      </td>
+                    </tr>
+
+                    {/* Filas de variante (nivel 2) — solo si el producto está expandido */}
+                    {expandido && g.variantes.map((item) => (
+                      <tr
+                        key={item.var_id}
+                        className={`hover:bg-gray-50 transition-colors ${
+                          item.estado_stock === 'agotado' ? 'bg-red-50/30' :
+                          item.estado_stock === 'bajo'    ? 'bg-red-50/30' : ''
+                        }`}
+                      >
+                        <td className="table-cell pl-12 pr-5" />
+                        <td className="table-cell px-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-gray-100 text-xs font-bold text-black">
+                            {item.talla}
+                          </span>
+                        </td>
+                        <td className="table-cell px-4">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
+                              style={{ backgroundColor: item.color_hex }}
+                            />
+                            <span className="text-sm text-gray-600">{item.color}</span>
+                          </div>
+                        </td>
+                        <td className="table-cell px-4 text-gray-500">{item.marca ?? '-'}</td>
+                        <td className="table-cell px-4 text-center">
+                          {editing === item.var_id ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                value={editVal}
+                                onChange={(e) => setEditVal(e.target.value)}
+                                className="w-20 text-center border border-black rounded-lg px-2 py-1 text-sm font-bold focus:outline-none"
+                                autoFocus
+                                min={0}
+                              />
+                              <button onClick={() => confirmEdit(item)} className="p-1 rounded-lg bg-admin-accent text-admin-accent-contrast hover:bg-admin-accent-hover transition-colors">
+                                <Check size={14} />
+                              </button>
+                              <button onClick={cancelEdit} className="p-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-2">
+                              <span className={`text-lg font-black ${
+                                item.estado_stock === 'agotado' ? 'text-red-600' :
+                                item.estado_stock === 'bajo'    ? 'text-red-600' : 'text-black'
+                              }`}>
+                                {item.stock}
+                              </span>
+                              <button onClick={() => startEdit(item)} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
+                                <Edit2 size={13} />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td className="table-cell px-4 text-center">
+                          <StockStatus estadoStock={item.estado_stock} />
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                )
+              })}
             </tbody>
           </table>
         )}

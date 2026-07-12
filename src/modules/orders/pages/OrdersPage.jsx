@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, ChevronDown, Search } from 'lucide-react'
+import { Eye, ChevronDown, Search, AlertTriangle } from 'lucide-react'
 import { useOrders } from '../hooks/useOrders'
 import { ESTADOS_PEDIDO } from '../../../services/orderService'
 import Badge from '../../../components/ui/Badge'
@@ -19,8 +19,8 @@ const BADGE_MAP = {
 }
 
 const ESTADO_LABEL = {
-  pendiente_pago: 'Pend. pago',
-  pagado:         'Pagado',
+  pendiente_pago: 'Pago en proceso',
+  pagado:         'Recibido',
   preparando:     'Preparando',
   enviado:        'Enviado',
   entregado:      'Entregado',
@@ -96,7 +96,12 @@ export default function OrdersPage() {
               {filtered.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                   <td className="table-cell px-5">
-                    <p className="font-bold text-black">{order.numero}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-bold text-black">{order.numero}</p>
+                      {order.alerta_stock && (
+                        <AlertTriangle size={13} className="text-red-500 flex-shrink-0" title="Faltante de stock sin resolver" />
+                      )}
+                    </div>
                   </td>
                   <td className="table-cell px-4">
                     <div>

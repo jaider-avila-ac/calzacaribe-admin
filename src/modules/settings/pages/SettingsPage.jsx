@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CreditCard, Moon, Save, Store, Sun, Phone, MapPin } from 'lucide-react'
 import Input from '../../../components/ui/Input'
 import { getTheme, setTheme as saveTheme } from '../../../services/themeService'
+import { tiendaConfigService } from '../../../services/tiendaConfigService'
 
 const INITIAL = {
   nombre: 'Calzacaribe',
@@ -13,14 +14,29 @@ const INITIAL = {
   sitioWeb: 'www.calzacaribe.co',
   moneda: 'COP',
   envioBase: '12000',
-  envioGratis: '200000',
   whatsapp: '3155550001',
 }
 
 export default function SettingsPage() {
   const [form, setForm] = useState(INITIAL)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => getTheme())
+
+  const [envioGratisActivo, setEnvioGratisActivo] = useState(true)
+  const [envioGratisDesde, setEnvioGratisDesde] = useState('200000')
+  const [dominioStaff, setDominioStaff] = useState('')
+
+  useEffect(() => {
+    tiendaConfigService.get()
+      .then((cfg) => {
+        setEnvioGratisActivo(cfg?.envio_gratis_activo ?? true)
+        setEnvioGratisDesde(String(cfg?.envio_gratis_desde ?? 200000))
+        setDominioStaff(cfg?.dominio_staff ?? '')
+      })
+      .catch(() => {})
+  }, [])
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
   const isDark = theme === 'dark'
@@ -29,10 +45,23 @@ export default function SettingsPage() {
     setTheme(saveTheme(isDark ? 'light' : 'dark'))
   }
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    setError('')
+    setSaving(true)
+    try {
+      await tiendaConfigService.update({
+        envioGratisActivo,
+        envioGratisDesde: Number(envioGratisDesde) || 0,
+        dominioStaff,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch {
+      setError('No se pudo guardar. Intenta de nuevo.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -51,7 +80,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={toggleTheme}
-              className={`relative h-7 w-14 rounded-full transition-colors flex-shrink-0 ${isDark ? 'bg-lime-300' : 'bg-gray-200'}`}
+              className={`relative h-7 w-14 rounded-full transition-colors flex-shrink-0 ${isDark ? 'bg-admin-accent' : 'bg-gray-200'}`}
               aria-pressed={isDark}
               aria-label="Cambiar modo oscuro"
             >
@@ -69,6 +98,17 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Nombre de la tienda" value={form.nombre} onChange={set('nombre')} />
             <Input label="NIT / RUT" value={form.nit} onChange={set('nit')} />
+          </div>
+          <div className="pt-2 border-t border-gray-100">
+            <Input
+              label="Dominio para colaboradores"
+              value={dominioStaff}
+              onChange={(e) => setDominioStaff(e.target.value)}
+              placeholder="tuempresa.com"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Los colaboradores que crees en "Colaboradores" recibirán un usuario con este dominio (ej. juan.perez@{dominioStaff || 'tuempresa.com'}).
+            </p>
           </div>
         </div>
 
@@ -104,7 +144,7 @@ export default function SettingsPage() {
             <CreditCard size={16} className="text-gray-500" />
             <h2 className="text-sm font-bold text-black">Envíos y pagos</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label-field">Moneda</label>
               <select value={form.moneda} onChange={set('moneda')} className="input-field bg-white">
@@ -113,7 +153,34 @@ export default function SettingsPage() {
               </select>
             </div>
             <Input label="Costo de envío base (COP)" type="number" value={form.envioBase} onChange={set('envioBase')} />
-            <Input label="Compra mín. para envío gratis (COP)" type="number" value={form.envioGratis} onChange={set('envioGratis')} />
+          </div>
+
+          <div className="pt-2 border-t border-gray-100 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-black">Envío gratis por monto mínimo</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Muestra la barra de progreso "te faltan $X para envío gratis" en la tienda.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEnvioGratisActivo((v) => !v)}
+                className={`relative h-7 w-14 rounded-full transition-colors flex-shrink-0 ${envioGratisActivo ? 'bg-admin-accent' : 'bg-gray-200'}`}
+                aria-pressed={envioGratisActivo}
+                aria-label="Activar envío gratis por monto mínimo"
+              >
+                <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${envioGratisActivo ? 'translate-x-8' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            <Input
+              label="Compra mín. para envío gratis (COP)"
+              type="number"
+              value={envioGratisDesde}
+              onChange={(e) => setEnvioGratisDesde(e.target.value)}
+              disabled={!envioGratisActivo}
+              className={!envioGratisActivo ? 'opacity-50' : ''}
+            />
           </div>
         </div>
 
@@ -127,10 +194,11 @@ export default function SettingsPage() {
         </div>
 
         {/* Save */}
-        <div className="flex justify-end">
-          <button type="submit" className={`btn-primary ${saved ? 'bg-lime-500 hover:bg-lime-600' : ''}`}>
+        <div className="flex items-center justify-end gap-3">
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button type="submit" disabled={saving} className={`btn-primary ${saved ? 'bg-admin-accent hover:bg-admin-accent-hover text-admin-accent-contrast' : ''}`}>
             <Save size={15} />
-            {saved ? '¡Guardado!' : 'Guardar cambios'}
+            {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar cambios'}
           </button>
         </div>
       </form>

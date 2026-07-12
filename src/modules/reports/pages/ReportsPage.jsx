@@ -4,12 +4,12 @@ import { reportService } from '../../../services/reportService'
 import { formatCurrency } from '../../../utils/format'
 
 const ESTADO_LABEL = {
-  pendiente_pago: 'Pend. pago', pagado: 'Pagado', preparando: 'Preparando',
+  pendiente_pago: 'Pago en proceso', pagado: 'Recibido', preparando: 'Preparando',
   enviado: 'Enviado', entregado: 'Entregado', cancelado: 'Cancelado', devuelto: 'Devuelto',
 }
 const ESTADO_COLORS = {
   pendiente_pago: 'bg-yellow-400', pagado: 'bg-violet-500', preparando: 'bg-gray-500',
-  enviado: 'bg-gray-700', entregado: 'bg-lime-400', cancelado: 'bg-red-500', devuelto: 'bg-orange-400',
+  enviado: 'bg-gray-700', entregado: 'bg-admin-accent', cancelado: 'bg-red-500', devuelto: 'bg-orange-400',
 }
 
 function currentMonth() {
@@ -74,15 +74,15 @@ export default function ReportsPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Ingresos del mes',  value: formatCurrency(resumen?.total_ingresos ?? 0),  icon: TrendingUp, color: 'text-lime-600' },
-          { label: 'Pedidos del mes',   value: resumen?.total_pedidos ?? 0,                    icon: ShoppingBag, color: 'text-violet-600' },
-          { label: 'Ticket promedio',   value: formatCurrency(resumen?.ticket_promedio ?? 0),  icon: ShoppingBag, color: 'text-black' },
-          { label: 'Clientes nuevos',   value: resumen?.total_clientes ?? 0,                   icon: Users, color: 'text-black' },
+          { label: 'Ingresos del mes',  value: formatCurrency(resumen?.total_ingresos ?? 0),  icon: TrendingUp },
+          { label: 'Pedidos del mes',   value: resumen?.total_pedidos ?? 0,                    icon: ShoppingBag },
+          { label: 'Ticket promedio',   value: formatCurrency(resumen?.ticket_promedio ?? 0),  icon: ShoppingBag },
+          { label: 'Clientes nuevos',   value: resumen?.total_clientes ?? 0,                   icon: Users },
         ].map((kpi) => {
           const Icon = kpi.icon
           return (
             <div key={kpi.label} className="section-card p-5 text-center">
-              <Icon size={20} className={`${kpi.color} mx-auto mb-2`} />
+              <Icon size={20} className="text-icon-mono mx-auto mb-2" />
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{kpi.label}</p>
               <p className="text-2xl font-black text-black mt-1">{kpi.value}</p>
             </div>
@@ -140,7 +140,7 @@ export default function ReportsPage() {
             <div className="space-y-3">
               {topProductos.map((p, i) => (
                 <div key={p.prd_id} className="flex items-center gap-3">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-lime-300 text-black' : 'bg-gray-100 text-gray-600'}`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-admin-accent text-admin-accent-contrast' : 'bg-gray-100 text-gray-600'}`}>
                     {i + 1}
                   </div>
                   {p.imagen_url ? (

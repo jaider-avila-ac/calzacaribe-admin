@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Edit2, Trash2, Plus, Search } from 'lucide-react'
+import { Edit2, Trash2, Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import { categoryService } from '../../../services/categoryService'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
 import { formatCurrency } from '../../../utils/format'
 
+const PAGE_SIZE = 20
+
 export default function ProductsPage() {
   const navigate = useNavigate()
-  const { products, loading, remove } = useProducts()
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterCat, setFilterCat] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [page, setPage] = useState(0)
   const [categories, setCategories] = useState([])
   const [catMap, setCatMap] = useState({})
 
@@ -24,20 +27,27 @@ export default function ProductsPage() {
     }).catch(() => {})
   }, [])
 
-  const filtered = products.filter((p) => {
-    const marca = p.ficha_tecnica?.marca ?? ''
-    const matchSearch =
-      p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      p.slug.toLowerCase().includes(search.toLowerCase()) ||
-      marca.toLowerCase().includes(search.toLowerCase())
-    const matchCat = filterCat ? p.cat_id === Number(filterCat) : true
-    const matchStatus = filterStatus === '' ? true : filterStatus === 'activo' ? p.activo : !p.activo
-    return matchSearch && matchCat && matchStatus
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => clearTimeout(t)
+  }, [search])
+
+  useEffect(() => { setPage(0) }, [debouncedSearch, filterCat, filterStatus])
+
+  const { products, totalElements, totalPages, loading, refreshing, remove } = useProducts({
+    page,
+    size: PAGE_SIZE,
+    catId: filterCat || undefined,
+    activo: filterStatus === '' ? undefined : filterStatus === 'activo',
+    q: debouncedSearch || undefined,
   })
 
   const handleDelete = (id, nombre) => {
     if (confirm(`¿Eliminar "${nombre}"?`)) remove(id)
   }
+
+  const from = totalElements === 0 ? 0 : page * PAGE_SIZE + 1
+  const to = page * PAGE_SIZE + products.length
 
   return (
     <div className="space-y-4">
@@ -62,6 +72,7 @@ export default function ProductsPage() {
             <option value="activo">Activos</option>
             <option value="inactivo">Inactivos</option>
           </select>
+          {refreshing && <span className="text-xs text-gray-400 animate-pulse">Actualizando…</span>}
           <button onClick={() => navigate('/productos/nuevo')} className="btn-primary ml-auto">
             <Plus size={15} /> Nuevo
           </button>
@@ -72,7 +83,7 @@ export default function ProductsPage() {
       <div className="section-card">
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">Cargando...</div>
-        ) : filtered.length === 0 ? (
+        ) : products.length === 0 ? (
           <EmptyState
             title="Sin productos"
             description="No hay productos que coincidan con tu búsqueda."
@@ -92,7 +103,7 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map((product) => {
+              {products.map((product) => {
                 const stock = product.stock_total ?? 0
                 const imagen = product.imagenes?.[0]?.url
                 const marca = product.ficha_tecnica?.marca
@@ -159,10 +170,29 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {filtered.length > 0 && (
-        <p className="text-xs text-gray-400 text-center">
-          Mostrando {filtered.length} de {products.length} productos
-        </p>
+      {totalElements > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            Mostrando {from}–{to} de {totalElements} productos
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="text-xs text-gray-500">Página {page + 1} de {Math.max(totalPages, 1)}</span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page + 1 >= totalPages}
+              className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

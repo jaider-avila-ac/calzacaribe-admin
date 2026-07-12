@@ -15,6 +15,9 @@ import ReportsPage from './modules/reports/pages/ReportsPage'
 import BannersPage from './modules/banners/pages/BannersPage'
 import ColeccionesPage from './modules/colecciones/pages/ColeccionesPage'
 import SettingsPage from './modules/settings/pages/SettingsPage'
+import CollaboratorsPage from './modules/collaborators/pages/CollaboratorsPage'
+import LocalSalePage from './modules/local-sale/pages/LocalSalePage'
+import AuditLogPage from './modules/audit-log/pages/AuditLogPage'
 
 export default function App() {
   return (
@@ -38,6 +41,7 @@ export default function App() {
             {/* Ventas */}
             <Route path="pedidos" element={<OrdersPage />} />
             <Route path="pedidos/:id" element={<OrderDetailPage />} />
+            <Route path="venta-local" element={<LocalSalePage />} />
             <Route path="clientes" element={<CustomersPage />} />
             <Route path="clientes/:id" element={<CustomerDetailPage />} />
 
@@ -46,6 +50,8 @@ export default function App() {
 
             {/* Sistema */}
             <Route path="banners" element={<BannersPage />} />
+            <Route path="colaboradores" element={<CollaboratorsPage />} />
+            <Route path="auditoria" element={<AuditLogPage />} />
             <Route path="configuracion" element={<SettingsPage />} />
           </Route>
         </Route>

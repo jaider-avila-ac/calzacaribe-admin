@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, CreditCard, Package, Truck } from 'lucide-react'
+import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle } from 'lucide-react'
 import { orderService, ESTADOS_PEDIDO } from '../../../services/orderService'
 import Badge from '../../../components/ui/Badge'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -16,8 +16,8 @@ const BADGE_MAP = {
 }
 
 const ESTADO_LABEL = {
-  pendiente_pago: 'Pend. pago',
-  pagado:         'Pagado',
+  pendiente_pago: 'Pago en proceso',
+  pagado:         'Recibido',
   preparando:     'Preparando',
   enviado:        'Enviado',
   entregado:      'Entregado',
@@ -32,14 +32,27 @@ export default function OrderDetailPage() {
   const [order,   setOrder]   = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [resolving, setResolving] = useState(false)
 
-  useEffect(() => {
+  const load = () => {
     setLoading(true)
     orderService.getById(id)
       .then(setOrder)
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
-  }, [id])
+  }
+
+  useEffect(load, [id])
+
+  const handleResolverAlerta = async () => {
+    setResolving(true)
+    try {
+      await orderService.resolverAlertaStock(id)
+      load()
+    } finally {
+      setResolving(false)
+    }
+  }
 
   if (loading) {
     return <div className="py-16 text-center text-sm text-gray-400">Cargando pedido…</div>
@@ -71,6 +84,28 @@ export default function OrderDetailPage() {
           {ESTADO_LABEL[order.estado] ?? order.estado}
         </Badge>
       </div>
+
+      {/* Alerta de stock insuficiente al confirmar el pago */}
+      {order.alerta_stock && (
+        <div className="section-card p-4 border-l-4 border-red-500 bg-red-50 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-bold text-red-700">Faltante de stock sin resolver</p>
+            <p className="text-xs text-red-600 mt-0.5">
+              El pago de este pedido ya fue aprobado, pero al confirmarlo no había stock suficiente
+              para uno o más productos (marcados abajo). Contacta al cliente, reabastece o gestiona
+              un reembolso parcial, y luego marca la alerta como resuelta para poder prepararlo.
+            </p>
+            <button
+              onClick={handleResolverAlerta}
+              disabled={resolving}
+              className="btn-danger text-xs mt-3"
+            >
+              {resolving ? 'Guardando…' : 'Marcar como resuelto'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Info del cliente */}
       <div className="section-card p-5 space-y-3">
@@ -127,12 +162,20 @@ export default function OrderDetailPage() {
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-black">{item.nombre_snap}</p>
+                  <p className="text-sm font-semibold text-black flex items-center gap-1.5">
+                    {item.nombre_snap}
+                    {item.stock_insuficiente && (
+                      <AlertTriangle size={13} className="text-red-500 flex-shrink-0" title="Sin stock suficiente al confirmar el pago" />
+                    )}
+                  </p>
                   <p className="text-xs text-gray-400">
                     {variantesTexto && `${variantesTexto} · `}Cant: {item.cantidad}
                   </p>
+                  {item.stock_insuficiente && (
+                    <p className="text-xs text-red-500 font-medium">Sin stock suficiente</p>
+                  )}
                   {item.descuento_unitario > 0 && (
-                    <p className="text-xs text-lime-600">Descuento: -{formatCurrency(item.descuento_unitario)}</p>
+                    <p className="text-xs text-admin-accent">Descuento: -{formatCurrency(item.descuento_unitario)}</p>
                   )}
                 </div>
                 <p className="text-sm font-bold text-black">{formatCurrency(item.subtotal)}</p>
@@ -148,7 +191,7 @@ export default function OrderDetailPage() {
             <span>{formatCurrency(order.subtotal)}</span>
           </div>
           {order.descuento > 0 && (
-            <div className="flex justify-between px-5 py-2.5 text-sm text-lime-600">
+            <div className="flex justify-between px-5 py-2.5 text-sm text-admin-accent">
               <span>Descuento</span>
               <span>-{formatCurrency(order.descuento)}</span>
             </div>

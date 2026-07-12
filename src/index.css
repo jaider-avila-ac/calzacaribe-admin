@@ -6,6 +6,14 @@
   font-family: 'Inter', sans-serif;
 }
 
+:root {
+  --admin-accent: #bef264;
+  --admin-accent-hover: #a3e635;
+  --admin-accent-soft: rgba(190, 242, 100, 0.15);
+  --admin-accent-subtle: #f7fee7;
+  --admin-accent-contrast: #000000;
+}
+
 @layer base {
   body {
     @apply bg-gray-50 text-black;
@@ -21,7 +29,8 @@
     @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer;
   }
   .sidebar-item-active {
-    @apply bg-lime-300 text-black;
+    background-color: var(--admin-accent);
+    color: var(--admin-accent-contrast);
   }
   .sidebar-item-inactive {
     @apply text-gray-400 hover:bg-gray-800 hover:text-white;
@@ -65,6 +74,46 @@
 }
 
 @layer utilities {
+  .bg-admin-accent {
+    background-color: var(--admin-accent);
+  }
+
+  .bg-admin-accent-hover {
+    background-color: var(--admin-accent-hover);
+  }
+
+  .bg-admin-accent-soft {
+    background-color: var(--admin-accent-soft);
+  }
+
+  .bg-admin-accent-subtle {
+    background-color: var(--admin-accent-subtle);
+  }
+
+  .text-admin-accent {
+    color: var(--admin-accent);
+  }
+
+  .text-admin-accent-contrast {
+    color: var(--admin-accent-contrast);
+  }
+
+  .border-admin-accent {
+    border-color: var(--admin-accent);
+  }
+
+  .text-icon-mono {
+    color: #000000;
+  }
+
+  .dark .text-icon-mono {
+    color: var(--admin-accent) !important;
+  }
+
+  .hover\:bg-admin-accent-hover:hover {
+    background-color: var(--admin-accent-hover);
+  }
+
   .dark .bg-white,
   .dark .bg-gray-50 {
     background-color: #111827 !important;
@@ -146,9 +195,9 @@
     color: #f9fafb !important;
   }
 
-  .dark .bg-lime-300.text-black,
+  .dark .bg-admin-accent.text-admin-accent-contrast,
   .dark .bg-yellow-400.text-black {
-    color: #111827 !important;
+    color: var(--admin-accent-contrast) !important;
   }
 }
 

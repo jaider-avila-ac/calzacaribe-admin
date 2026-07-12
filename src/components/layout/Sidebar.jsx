@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, Package, Tag, Layers, ShoppingBag,
+  LayoutDashboard, Package, Tag, ShoppingBag,
   Users, Ticket, BarChart2, Settings, ChevronDown,
   Warehouse, X,
 } from 'lucide-react'
@@ -27,8 +27,9 @@ const NAV = [
     group: 'Ventas',
     icon: ShoppingBag,
     items: [
-      { label: 'Pedidos',     path: '/pedidos'     },
-      { label: 'Clientes',   path: '/clientes'   },
+      { label: 'Pedidos',      path: '/pedidos'      },
+      { label: 'Venta local',  path: '/venta-local'  },
+      { label: 'Clientes',    path: '/clientes'    },
     ],
   },
   {
@@ -41,6 +42,8 @@ const NAV = [
     icon: Settings,
     items: [
       { label: 'Banners',       path: '/banners'       },
+      { label: 'Colaboradores', path: '/colaboradores', roles: ['admin', 'superadmin'] },
+      { label: 'Auditoría', path: '/auditoria', roles: ['admin', 'superadmin'] },
       { label: 'Configuración', path: '/configuracion' },
     ],
   },
@@ -57,8 +60,11 @@ export default function Sidebar({ open, onClose }) {
   const toggle = (group) =>
     setExpanded((prev) => ({ ...prev, [group]: !prev[group] }))
 
+  const visibleItems = (section) =>
+    section.items.filter((item) => !item.roles || item.roles.includes(user?.rol))
+
   const isGroupActive = (section) =>
-    section.items.some((item) => location.pathname.startsWith(item.path))
+    visibleItems(section).some((item) => location.pathname.startsWith(item.path))
 
   return (
     <>
@@ -77,14 +83,8 @@ export default function Sidebar({ open, onClose }) {
       >
         {/* ── Logo ── */}
         <div className="px-4 py-5 border-b border-white/[0.06] flex items-center justify-between flex-shrink-0">
-          <Link to="/dashboard" className="flex items-center gap-2.5" onClick={onClose}>
-            <div className="w-8 h-8 bg-lime-300 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Layers size={15} className="text-black" strokeWidth={2.5} />
-            </div>
-            <div className="leading-none">
-              <p className="text-white font-black text-[13px] tracking-tight">CALZA</p>
-              <p className="text-lime-300 font-black text-[13px] tracking-tight">CARIBE</p>
-            </div>
+          <Link to="/dashboard" onClick={onClose}>
+            <img src="/logos/imagotico-calzacaribe.svg" alt="Calzacaribe" className="h-6" />
           </Link>
           <button
             onClick={onClose}
@@ -114,7 +114,7 @@ export default function Sidebar({ open, onClose }) {
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl
                     text-[13px] font-semibold transition-all duration-150 group
                     ${hasActive
-                      ? 'bg-lime-300 text-black'
+                      ? 'bg-admin-accent text-admin-accent-contrast'
                       : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'}`}
                 >
                   <Icon size={15} strokeWidth={2} className="flex-shrink-0" />
@@ -122,21 +122,21 @@ export default function Sidebar({ open, onClose }) {
 
                   {/* Dot si está colapsado y tiene hijo activo */}
                   {!isOpen && hasActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-black flex-shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-admin-accent-contrast flex-shrink-0" />
                   )}
 
                   <ChevronDown
                     size={13}
                     className={`flex-shrink-0 transition-transform duration-200
                       ${isOpen ? 'rotate-180' : ''}
-                      ${hasActive ? 'text-black/60' : 'text-gray-700 group-hover:text-gray-400'}`}
+                      ${hasActive ? 'text-white/70' : 'text-gray-700 group-hover:text-gray-400'}`}
                   />
                 </button>
 
                 {/* Sub-items — estilo árbol de archivos */}
                 {isOpen && (
                   <div className="mt-[2px] ml-[18px] pl-3 border-l border-white/[0.07]">
-                    {section.items.map((item) => (
+                    {visibleItems(section).map((item) => (
                       <NavLink
                         key={item.path}
                         to={item.path}
@@ -145,7 +145,7 @@ export default function Sidebar({ open, onClose }) {
                           `flex items-center gap-2.5 px-3 py-[7px] my-[1px] rounded-lg
                           text-[12.5px] font-medium transition-all duration-150
                           ${isActive
-                            ? 'bg-lime-300/15 text-lime-300'
+                            ? 'bg-admin-accent-soft text-admin-accent'
                             : 'text-gray-500 hover:bg-white/[0.05] hover:text-gray-200'}`
                         }
                       >
@@ -153,7 +153,7 @@ export default function Sidebar({ open, onClose }) {
                           <>
                             <span
                               className={`w-[5px] h-[5px] rounded-full flex-shrink-0 transition-colors
-                                ${isActive ? 'bg-lime-300' : 'bg-gray-700'}`}
+                                ${isActive ? 'bg-admin-accent' : 'bg-gray-700'}`}
                             />
                             {item.label}
                           </>
@@ -170,7 +170,7 @@ export default function Sidebar({ open, onClose }) {
         {/* ── Footer con usuario ── */}
         <div className="p-3 border-t border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-colors cursor-default">
-            <div className="w-8 h-8 rounded-full bg-lime-300 flex items-center justify-center text-black text-xs font-black flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-admin-accent flex items-center justify-center text-admin-accent-contrast text-xs font-black flex-shrink-0">
               {user?.nombre?.charAt(0)?.toUpperCase() ?? 'A'}
             </div>
             <div className="flex-1 min-w-0">

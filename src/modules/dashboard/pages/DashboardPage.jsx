@@ -13,7 +13,7 @@ const BADGE_MAP = {
   enviado: 'dark', entregado: 'success', cancelado: 'danger', devuelto: 'default',
 }
 const ESTADO_LABEL = {
-  pendiente_pago: 'Pend. pago', pagado: 'Pagado', preparando: 'Preparando',
+  pendiente_pago: 'Pago en proceso', pagado: 'Recibido', preparando: 'Preparando',
   enviado: 'Enviado', entregado: 'Entregado', cancelado: 'Cancelado', devuelto: 'Devuelto',
 }
 
@@ -62,28 +62,24 @@ export default function DashboardPage() {
           value={formatCurrency(resumen?.total_ingresos ?? 0)}
           subtitle="Pedidos entregados"
           icon={DollarSign}
-          accent="lime"
         />
         <StatCard
           title="Pedidos del mes"
           value={resumen?.total_pedidos ?? 0}
           subtitle={`${pendingCount} en proceso`}
           icon={ShoppingBag}
-          accent="violet"
         />
         <StatCard
           title="Clientes nuevos"
           value={resumen?.total_clientes ?? 0}
           subtitle="Registrados este mes"
           icon={Users}
-          accent="default"
         />
         <StatCard
           title="Productos"
           value={resumen?.total_productos ?? 0}
           subtitle={`${resumen?.productos_activos ?? 0} activos`}
           icon={Package}
-          accent="default"
         />
       </div>
 
@@ -102,9 +98,7 @@ export default function DashboardPage() {
             <div className="divide-y divide-gray-50">
               {recentOrders.map((order) => (
                 <div key={order.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
-                  <div className="w-9 h-9 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
-                    <ShoppingBag size={15} className="text-lime-300" />
-                  </div>
+                  <ShoppingBag size={18} className="text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-black truncate">{order.numero} — {order.cliente_nombre}</p>
                     <p className="text-xs text-gray-400">{formatDate(order.creado_en)}</p>
@@ -159,7 +153,7 @@ export default function DashboardPage() {
           <h2 className="text-sm font-bold text-black">Pedidos por estado</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-50">
-          {['pendiente_pago', 'preparando', 'enviado', 'entregado'].map((estado) => {
+          {['pagado', 'preparando', 'enviado', 'entregado'].map((estado) => {
             const found = byEstado.find((e) => e.estado === estado)
             return (
               <div key={estado} className="px-5 py-4 text-center">

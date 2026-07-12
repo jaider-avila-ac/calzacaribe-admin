@@ -111,27 +111,87 @@ function normalizeVariants(variants) {
   }))
 }
 
-function normalizeMedia(form) {
+/** Campos comunes al producto que aplican a cualquier sección (nunca tocan variantes/imágenes). */
+function buildBasePayload(form) {
+  return {
+    cat_id:  Number(form.cat_id),
+    sub_id:  form.sub_id ? Number(form.sub_id) : null,
+    nombre:  form.nombre.trim(),
+    slug:    form.slug.trim(),
+    descripcion: form.descripcion.trim(),
+    // Sin oferta: precio = precio normal, precio_antes = null
+    // Con oferta: precio = precio oferta (lo que paga el cliente), precio_antes = precio normal
+    precio:       form.ofertaActiva ? Number(form.precioOferta) : Number(form.precio),
+    precio_antes: form.ofertaActiva ? Number(form.precio) : null,
+    oferta_hasta: form.ofertaActiva && form.ofertaHasta ? form.ofertaHasta : null,
+    ficha_tecnica: form.ficha_tecnica,
+    activo:   form.activo,
+  }
+}
+
+/** Sube a Cloudinary las imágenes/video pendientes (con _file) y arma la lista final. */
+async function uploadPendingMedia(form, isEdit, id) {
+  const imagenesFinales = []
+  for (const img of form.imagenes) {
+    if (img._file) {
+      const fd = new FormData()
+      fd.append('file', img._file)
+      if (isEdit) fd.append('productId', id)
+      const { url } = await api.upload('/upload/imagen', fd)
+      URL.revokeObjectURL(img.url)
+      imagenesFinales.push({ url, orden: img.orden, tipo: 'imagen', var_id: img.varId ?? null })
+    } else {
+      imagenesFinales.push({ url: img.url, orden: img.orden, tipo: img.tipo, var_id: img.varId ?? null })
+    }
+  }
+
+  let videoUrl = null
+  if (form.video) {
+    if (form.video._file) {
+      const fd = new FormData()
+      fd.append('file', form.video._file)
+      fd.append('esVideo', 'true')
+      if (isEdit) fd.append('productId', id)
+      const { url } = await api.upload('/upload/imagen', fd)
+      URL.revokeObjectURL(form.video.url)
+      videoUrl = url
+    } else {
+      videoUrl = form.video.url
+    }
+  }
+
+  return { imagenesFinales, videoUrl }
+}
+
+function buildMediaPayload({ imagenesFinales, videoUrl }) {
   return [
-    ...(form.imagenes ?? []).map((img, idx) => ({
-      url: img.url,
-      orden: img.orden ?? idx,
-      tipo: img.tipo ?? 'imagen',
-      var_id: img.varId ?? img.var_id ?? null,
-      pending: Boolean(img._file),
-    })),
-    ...(form.video ? [{
-      url: form.video.url,
-      orden: 99,
-      tipo: 'video',
-      var_id: null,
-      pending: Boolean(form.video._file),
-    }] : []),
+    ...imagenesFinales.map((i, idx) => ({ url: i.url, orden: i.orden ?? idx, tipo: 'imagen', var_id: i.var_id ?? null })),
+    ...(videoUrl ? [{ url: videoUrl, orden: 99, tipo: 'video' }] : []),
   ]
 }
 
-function sameJson(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b)
+/** Tarjeta de sección: en modo edición se vuelve un <form> con su propio botón Guardar. */
+function Section({ title, extra, isEdit, status, onSave, children }) {
+  const { saving = false, saved = false, error = '' } = status ?? {}
+  const body = (
+    <div className="section-card p-6 space-y-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <h2 className="text-sm font-bold text-black">{title}</h2>
+        {extra}
+      </div>
+      {children}
+      {isEdit && (
+        <div className="flex items-center gap-3 justify-end pt-1">
+          {error && <p className="text-xs text-red-500 mr-auto">{error}</p>}
+          <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-4">
+            <Save size={14} />
+            {saving ? 'Guardando...' : saved ? 'Guardado' : 'Guardar'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+  return isEdit ? <form onSubmit={onSave}>{body}</form> : body
 }
 
 export default function ProductFormPage() {
@@ -142,11 +202,11 @@ export default function ProductFormPage() {
   const [form, setForm] = useState(emptyForm())
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+  const [sectionStatus, setSectionStatus] = useState({})
   const [categoryOptions, setCategoryOptions] = useState([{ value: '', label: 'Seleccionar categoría...' }])
   const [subcatOptions, setSubcatOptions] = useState([{ value: '', label: 'Sin subcategoría' }])
   const imgInputRef = useRef(null)
   const vidInputRef = useRef(null)
-  const originalSectionsRef = useRef({ variantes: [], media: [] })
 
   useEffect(() => {
     categoryService.getAll().then((data) => {
@@ -190,10 +250,6 @@ export default function ProductFormPage() {
         video: videoItem ? { url: videoItem.url } : null,
       }
       setForm(loadedForm)
-      originalSectionsRef.current = {
-        variantes: normalizeVariants(loadedForm.variantes),
-        media: normalizeMedia(loadedForm),
-      }
       if (p.cat_id) loadSubcats(p.cat_id)
     }).catch(() => {})
   }, [id, isEdit])
@@ -300,72 +356,48 @@ export default function ProductFormPage() {
     return e
   }
 
-  const handleSubmit = async (e) => {
+  const setStatus = (key, patch) =>
+    setSectionStatus((s) => ({ ...s, [key]: { saving: false, saved: false, error: '', ...s[key], ...patch } }))
+
+  /** Guarda una sección específica del producto (solo disponible en modo edición). */
+  const saveSection = (key, { withVariantes = false, withMedia = false } = {}) => async (e) => {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
-    setSaving(true)
-
+    setStatus(key, { saving: true, saved: false, error: '' })
     try {
-      // Subir imágenes pendientes (locales) y reemplazar con URL de Cloudinary
-      const imagenesFinales = []
-      for (const img of form.imagenes) {
-        if (img._file) {
-          const fd = new FormData()
-          fd.append('file', img._file)
-          if (isEdit) fd.append('productId', id)
-          const { url } = await api.upload('/upload/imagen', fd)
-          URL.revokeObjectURL(img.url)
-          imagenesFinales.push({ url, orden: img.orden, tipo: 'imagen', var_id: img.varId ?? null })
-        } else {
-          imagenesFinales.push({ url: img.url, orden: img.orden, tipo: img.tipo, var_id: img.varId ?? null })
-        }
+      const data = buildBasePayload(form)
+      if (withVariantes) {
+        data.variantes = normalizeVariants(form.variantes)
       }
-
-      // Subir video pendiente (local) si aplica
-      let videoUrl = null
-      if (form.video) {
-        if (form.video._file) {
-          const fd = new FormData()
-          fd.append('file', form.video._file)
-          fd.append('esVideo', 'true')
-          if (isEdit) fd.append('productId', id)
-          const { url } = await api.upload('/upload/imagen', fd)
-          URL.revokeObjectURL(form.video.url)
-          videoUrl = url
-        } else {
-          videoUrl = form.video.url
-        }
+      if (withMedia) {
+        const { imagenesFinales, videoUrl } = await uploadPendingMedia(form, isEdit, id)
+        data.imagenes = buildMediaPayload({ imagenesFinales, videoUrl })
+        setForm((f) => ({
+          ...f,
+          imagenes: imagenesFinales.map((img) => ({ url: img.url, orden: img.orden, tipo: img.tipo, varId: img.var_id ?? null })),
+          video: videoUrl ? { url: videoUrl } : null,
+        }))
       }
+      await productService.update(id, data)
+      setStatus(key, { saving: false, saved: true })
+      setTimeout(() => setStatus(key, { saved: false }), 2000)
+    } catch (err) {
+      setStatus(key, { saving: false, error: err.message || 'No se pudo guardar' })
+    }
+  }
 
-      const todasImagenes = [
-        ...imagenesFinales.map((i, idx) => ({ url: i.url, orden: i.orden ?? idx, tipo: 'imagen', var_id: i.var_id ?? null })),
-        ...(videoUrl ? [{ url: videoUrl, orden: 99, tipo: 'video' }] : []),
-      ]
-      const variantesPayload = normalizeVariants(form.variantes)
-      const mediaActual = normalizeMedia(form)
-      const variantesChanged = !isEdit || !sameJson(variantesPayload, originalSectionsRef.current.variantes)
-      const mediaChanged = !isEdit || !sameJson(mediaActual, originalSectionsRef.current.media)
-
-      const data = {
-        cat_id:  Number(form.cat_id),
-        sub_id:  form.sub_id ? Number(form.sub_id) : null,
-        nombre:  form.nombre.trim(),
-        slug:    form.slug.trim(),
-        descripcion: form.descripcion.trim(),
-        // Sin oferta: precio = precio normal, precio_antes = null
-        // Con oferta: precio = precio oferta (lo que paga el cliente), precio_antes = precio normal
-        precio:       form.ofertaActiva ? Number(form.precioOferta) : Number(form.precio),
-        precio_antes: form.ofertaActiva ? Number(form.precio) : null,
-        oferta_hasta: form.ofertaActiva && form.ofertaHasta ? form.ofertaHasta : null,
-        ficha_tecnica: form.ficha_tecnica,
-        activo:   form.activo,
-      }
-      if (variantesChanged) data.variantes = variantesPayload
-      if (mediaChanged) data.imagenes = todasImagenes
-
-      if (isEdit) await productService.update(id, data)
-      else        await productService.create(data)
+  /** Crea el producto completo (solo aplica cuando aún no existe, o sea !isEdit). */
+  const handleCreate = async () => {
+    const errs = validate()
+    if (Object.keys(errs).length) { setErrors(errs); return }
+    setSaving(true)
+    try {
+      const { imagenesFinales, videoUrl } = await uploadPendingMedia(form, isEdit, id)
+      const data = buildBasePayload(form)
+      data.variantes = normalizeVariants(form.variantes)
+      data.imagenes = buildMediaPayload({ imagenesFinales, videoUrl })
+      await productService.create(data)
       navigate('/productos')
     } catch (err) {
       alert('Error al guardar: ' + err.message)
@@ -386,11 +418,10 @@ export default function ProductFormPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-5">
 
         {/* ── Información básica ── */}
-        <div className="section-card p-6 space-y-4">
-          <h2 className="text-sm font-bold text-black border-b border-gray-100 pb-3">Información básica</h2>
+        <Section title="Información básica" isEdit={isEdit} status={sectionStatus.basica} onSave={saveSection('basica')}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Nombre del producto" value={form.nombre} onChange={handleNombre} placeholder="Ej: Tenis Urban Pro" error={errors.nombre} />
             <Input label="Slug (URL)" value={form.slug} onChange={set('slug')} placeholder="tenis-urban-pro" error={errors.slug} />
@@ -402,12 +433,10 @@ export default function ProductFormPage() {
             <textarea value={form.descripcion} onChange={set('descripcion')} rows={3}
               placeholder="Describe el producto..." className="input-field resize-none" />
           </div>
-        </div>
+        </Section>
 
         {/* ── Ficha técnica ── */}
-        <div className="section-card p-6 space-y-4">
-          <h2 className="text-sm font-bold text-black border-b border-gray-100 pb-3">Ficha técnica</h2>
-
+        <Section title="Ficha técnica" isEdit={isEdit} status={sectionStatus.ficha} onSave={saveSection('ficha')}>
           {/* Campos base siempre visibles */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input label="Marca" value={form.ficha_tecnica.marca} onChange={setFicha('marca')} placeholder="Ej: Nike" />
@@ -481,12 +510,10 @@ export default function ProductFormPage() {
               </div>
             )
           })()}
-        </div>
+        </Section>
 
         {/* ── Precios ── */}
-        <div className="section-card p-6 space-y-4">
-          <h2 className="text-sm font-bold text-black border-b border-gray-100 pb-3">Precios (COP)</h2>
-
+        <Section title="Precios (COP)" isEdit={isEdit} status={sectionStatus.precios} onSave={saveSection('precios')}>
           <Input label="Precio normal" type="number" value={form.precio} onChange={set('precio')}
             placeholder="189900" error={errors.precio} />
 
@@ -518,16 +545,20 @@ export default function ProductFormPage() {
               </div>
             </div>
           )}
-        </div>
+        </Section>
 
         {/* ── Variantes ── */}
-        <div className="section-card p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h2 className="text-sm font-bold text-black">Variantes (talla × color × stock)</h2>
+        <Section
+          title="Variantes (talla × color × stock)"
+          isEdit={isEdit}
+          status={sectionStatus.variantes}
+          onSave={saveSection('variantes', { withVariantes: true })}
+          extra={
             <button type="button" onClick={addVariant} className="btn-secondary text-xs py-1.5">
               <Plus size={13} /> Añadir variante
             </button>
-          </div>
+          }
+        >
           {form.variantes.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-4">Sin variantes. Cada combinación de talla y color es una variante con su propio stock.</p>
           ) : (
@@ -584,132 +615,142 @@ export default function ProductFormPage() {
               </table>
             </div>
           )}
-        </div>
+        </Section>
 
-        {/* ── Imágenes ── */}
-        <div className="section-card p-6 space-y-4">
-          <h2 className="text-sm font-bold text-black border-b border-gray-100 pb-3">
-            Imágenes <span className="font-normal text-gray-400">({form.imagenes.length}/5)</span>
-          </h2>
+        {/* ── Imágenes y video ── */}
+        <Section
+          title="Imágenes y video"
+          isEdit={isEdit}
+          status={sectionStatus.media}
+          onSave={saveSection('media', { withMedia: true })}
+        >
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+              Imágenes <span className="font-normal text-gray-400 normal-case">({form.imagenes.length}/5)</span>
+            </p>
 
-          {/* Colores únicos de las variantes para asignar a imágenes */}
-          {(() => {
-            const colores = form.variantes.reduce((acc, v) => {
-              if (v.color && !acc.find(c => c.color === v.color))
-                acc.push({ id: v.id ?? null, color: v.color, hex: v.color_hex })
-              return acc
-            }, [])
-            return (
-              <div className="flex flex-wrap gap-4">
-                {form.imagenes.map((img, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-1.5">
-                    <div className="relative group">
-                      <img src={img.url} alt="" className={`w-24 h-24 rounded-xl object-cover bg-gray-100 ${img._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
-                      {idx === 0 && (
-                        <span className="absolute bottom-1 left-1 text-[10px] bg-black text-white px-1.5 py-0.5 rounded-md">
-                          Principal
-                        </span>
+            {/* Colores únicos de las variantes para asignar a imágenes */}
+            {(() => {
+              const colores = form.variantes.reduce((acc, v) => {
+                if (v.color && !acc.find(c => c.color === v.color))
+                  acc.push({ id: v.id ?? null, color: v.color, hex: v.color_hex })
+                return acc
+              }, [])
+              return (
+                <div className="flex flex-wrap gap-4">
+                  {form.imagenes.map((img, idx) => (
+                    <div key={idx} className="flex flex-col items-center gap-1.5">
+                      <div className="relative group">
+                        <img src={img.url} alt="" className={`w-24 h-24 rounded-xl object-cover bg-gray-100 ${img._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
+                        {idx === 0 && (
+                          <span className="absolute bottom-1 left-1 text-[10px] bg-black text-white px-1.5 py-0.5 rounded-md">
+                            Principal
+                          </span>
+                        )}
+                        {img._file && (
+                          <span className="absolute top-1 left-1 text-[9px] bg-yellow-400 text-black px-1 py-0.5 rounded-md font-semibold">
+                            Pendiente
+                          </span>
+                        )}
+                        <button type="button" onClick={() => removeImage(idx)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                          ×
+                        </button>
+                      </div>
+                      {/* Dropdown de color para esta imagen */}
+                      {colores.length > 0 && (
+                        <select
+                          value={img.varId ?? ''}
+                          onChange={(e) => setForm((f) => ({
+                            ...f,
+                            imagenes: f.imagenes.map((im, i) =>
+                              i === idx ? { ...im, varId: e.target.value ? Number(e.target.value) : null } : im
+                            )
+                          }))}
+                          className="text-[10px] border border-gray-200 rounded-lg px-1.5 py-1 w-24 bg-white"
+                        >
+                          <option value="">Todos</option>
+                          {colores.map((c) => (
+                            <option key={c.color} value={c.id ?? ''}>
+                              {c.color}
+                            </option>
+                          ))}
+                        </select>
                       )}
-                      {img._file && (
-                        <span className="absolute top-1 left-1 text-[9px] bg-yellow-400 text-black px-1 py-0.5 rounded-md font-semibold">
-                          Pendiente
-                        </span>
-                      )}
-                      <button type="button" onClick={() => removeImage(idx)}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                        ×
+                    </div>
+                  ))}
+
+                  {form.imagenes.length < 5 && (
+                    <div className="flex flex-col items-center">
+                      <button type="button" onClick={() => imgInputRef.current?.click()}
+                        className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 hover:border-gray-400 hover:bg-gray-50 transition-all">
+                        <Upload size={20} className="text-gray-400" />
+                        <span className="text-[10px] text-gray-400">Agregar</span>
                       </button>
                     </div>
-                    {/* Dropdown de color para esta imagen */}
-                    {colores.length > 0 && (
-                      <select
-                        value={img.varId ?? ''}
-                        onChange={(e) => setForm((f) => ({
-                          ...f,
-                          imagenes: f.imagenes.map((im, i) =>
-                            i === idx ? { ...im, varId: e.target.value ? Number(e.target.value) : null } : im
-                          )
-                        }))}
-                        className="text-[10px] border border-gray-200 rounded-lg px-1.5 py-1 w-24 bg-white"
-                      >
-                        <option value="">Todos</option>
-                        {colores.map((c) => (
-                          <option key={c.color} value={c.id ?? ''}>
-                            {c.color}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                ))}
+                  )}
+                </div>
+              )
+            })()}
 
-                {form.imagenes.length < 5 && (
-                  <div className="flex flex-col items-center">
-                    <button type="button" onClick={() => imgInputRef.current?.click()}
-                      className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 hover:border-gray-400 hover:bg-gray-50 transition-all">
-                      <Upload size={20} className="text-gray-400" />
-                      <span className="text-[10px] text-gray-400">Agregar</span>
-                    </button>
-                  </div>
-                )}
+            <input ref={imgInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImgUpload} />
+            <p className="text-xs text-gray-400 mt-2">La primera imagen es la principal. Las que tienen borde amarillo se suben al guardar.</p>
+          </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+              Video <span className="font-normal text-gray-400 normal-case">(opcional · máx. {MAX_VIDEO_MB} MB)</span>
+            </p>
+
+            {form.video ? (
+              <div className="flex items-start gap-4">
+                <video src={form.video.url} controls className={`w-48 h-28 rounded-xl object-cover bg-black ${form.video._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
+                <div className="mt-1 space-y-1">
+                  {form.video._file && (
+                    <p className="text-[10px] text-yellow-600 font-semibold">Pendiente — se sube al guardar</p>
+                  )}
+                  <button type="button" onClick={removeVideo}
+                    className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700">
+                    <X size={13} /> Eliminar video
+                  </button>
+                </div>
               </div>
-            )
-          })()}
+            ) : (
+              <button type="button" onClick={() => vidInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all text-sm text-gray-500">
+                <Video size={16} /> Subir video del producto
+              </button>
+            )}
 
-          <input ref={imgInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImgUpload} />
-          <p className="text-xs text-gray-400">La primera imagen es la principal. Las que tienen borde amarillo se suben al guardar.</p>
-        </div>
-
-        {/* ── Video ── */}
-        <div className="section-card p-6 space-y-4">
-          <h2 className="text-sm font-bold text-black border-b border-gray-100 pb-3">
-            Video <span className="font-normal text-gray-400">(opcional · máx. {MAX_VIDEO_MB} MB)</span>
-          </h2>
-
-          {form.video ? (
-            <div className="flex items-start gap-4">
-              <video src={form.video.url} controls className={`w-48 h-28 rounded-xl object-cover bg-black ${form.video._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
-              <div className="mt-1 space-y-1">
-                {form.video._file && (
-                  <p className="text-[10px] text-yellow-600 font-semibold">Pendiente — se sube al guardar</p>
-                )}
-                <button type="button" onClick={removeVideo}
-                  className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700">
-                  <X size={13} /> Eliminar video
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" onClick={() => vidInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all text-sm text-gray-500">
-              <Video size={16} /> Subir video del producto
-            </button>
-          )}
-
-          <input ref={vidInputRef} type="file" accept="video/*" className="hidden" onChange={handleVidUpload} />
-        </div>
+            <input ref={vidInputRef} type="file" accept="video/*" className="hidden" onChange={handleVidUpload} />
+          </div>
+        </Section>
 
         {/* ── Estado ── */}
-        <div className="section-card p-5 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-black">Estado del producto</p>
-            <p className="text-xs text-gray-400">Solo los productos activos son visibles en la tienda</p>
+        <Section title="Estado del producto" isEdit={isEdit} status={sectionStatus.estado} onSave={saveSection('estado')}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-black">Producto activo</p>
+              <p className="text-xs text-gray-400">Solo los productos activos son visibles en la tienda</p>
+            </div>
+            <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
-          <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
-        </div>
+        </Section>
 
-        {/* ── Acciones ── */}
-        <div className="flex justify-end gap-3">
-          <button type="button" onClick={() => navigate('/productos')} className="btn-secondary">Cancelar</button>
-          <button type="submit" disabled={saving} className="btn-primary">
-            <Save size={15} />
-            {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear producto'}
-          </button>
-        </div>
-      </form>
+        {/* ── Acciones (solo al crear; en edición cada sección guarda por su cuenta) ── */}
+        {!isEdit && (
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => navigate('/productos')} className="btn-secondary">Cancelar</button>
+            <button type="button" onClick={handleCreate} disabled={saving} className="btn-primary">
+              <Save size={15} />
+              {saving ? 'Guardando...' : 'Crear producto'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
