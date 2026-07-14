@@ -129,7 +129,9 @@ export default function LocalSalePage() {
       </div>
 
       {/* ── Cliente ── */}
-      <div className="section-card p-6 space-y-4">
+      {/* !overflow-visible: section-card trae overflow-hidden (por las esquinas redondeadas),
+          que recortaba la lista de resultados de la búsqueda de cliente. */}
+      <div className="section-card p-6 space-y-4 !overflow-visible">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setClienteModo('existente')}
@@ -200,7 +202,9 @@ export default function LocalSalePage() {
       </div>
 
       {/* ── Productos ── */}
-      <div className="section-card p-6 space-y-4">
+      {/* !overflow-visible: mismo motivo que la tarjeta de Cliente, para la lista de resultados
+          de la búsqueda de producto. */}
+      <div className="section-card p-6 space-y-4 !overflow-visible">
         <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
           <ShoppingBag size={16} className="text-gray-500" />
           <h2 className="text-sm font-bold text-black">Productos</h2>
