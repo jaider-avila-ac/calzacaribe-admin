@@ -24,8 +24,8 @@ export default function Header({ onMenuClick }) {
   const navigate = useNavigate()
   const user = authService.getUser()
 
-  const handleLogout = () => {
-    authService.logout()
+  const handleLogout = async () => {
+    await authService.logout()
     navigate('/login', { replace: true })
   }
 

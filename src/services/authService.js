@@ -19,7 +19,16 @@ export const authService = {
     return data
   },
 
-  logout: () => {
+  // Invalida el token en el backend (best-effort) antes de borrarlo localmente —
+  // si no, seguiría siendo válido hasta su vencimiento aunque alguien más lo tuviera.
+  logout: async () => {
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (token) {
+      await fetch(`${API}/auth/admin/logout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant-Id': '1' },
+      }).catch(() => {})
+    }
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
   },
