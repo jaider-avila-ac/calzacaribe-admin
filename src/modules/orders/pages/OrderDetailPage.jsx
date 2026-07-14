@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle, Link2 } from 'lucide-react'
 import { orderService, ESTADOS_PEDIDO } from '../../../services/orderService'
 import Badge from '../../../components/ui/Badge'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -33,11 +33,14 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [resolving, setResolving] = useState(false)
+  const [linkInput, setLinkInput] = useState('')
+  const [savingLink, setSavingLink] = useState(false)
+  const [linkError, setLinkError] = useState('')
 
   const load = () => {
     setLoading(true)
     orderService.getById(id)
-      .then(setOrder)
+      .then((data) => { setOrder(data); setLinkInput(data.link_seguimiento ?? '') })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }
@@ -51,6 +54,19 @@ export default function OrderDetailPage() {
       load()
     } finally {
       setResolving(false)
+    }
+  }
+
+  const handleGuardarLink = async () => {
+    setSavingLink(true)
+    setLinkError('')
+    try {
+      await orderService.updateLinkSeguimiento(id, linkInput.trim())
+      load()
+    } catch (err) {
+      setLinkError(err.message || 'No se pudo guardar el link')
+    } finally {
+      setSavingLink(false)
     }
   }
 
@@ -104,6 +120,42 @@ export default function OrderDetailPage() {
               {resolving ? 'Guardando…' : 'Marcar como resuelto'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Link de seguimiento del envío (Coordinadora, Servientrega, etc.) */}
+      {order.estado !== 'pendiente_pago' && (
+        <div className="section-card p-5 space-y-3">
+          <h2 className="text-sm font-bold text-black flex items-center gap-1.5">
+            <Link2 size={15} /> Link de seguimiento
+          </h2>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={linkInput}
+              onChange={(e) => setLinkInput(e.target.value)}
+              placeholder="https://..."
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-black transition-colors"
+            />
+            <button
+              onClick={handleGuardarLink}
+              disabled={savingLink}
+              className="btn-primary text-xs px-4"
+            >
+              {savingLink ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+          {linkError && <p className="text-xs text-red-500">{linkError}</p>}
+          {order.link_seguimiento && (
+            <a
+              href={order.link_seguimiento}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-admin-accent hover:underline"
+            >
+              Abrir link actual →
+            </a>
+          )}
         </div>
       )}
 
