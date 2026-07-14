@@ -37,6 +37,7 @@ export default function LocalSalePage() {
   const [cantidad, setCantidad] = useState(1)
 
   const [items, setItems] = useState([])
+  const [quote, setQuote] = useState({ items: [], total: 0 })
   const [metodoPago, setMetodoPago] = useState('EFECTIVO')
   const [notas, setNotas] = useState('')
   const [saving, setSaving] = useState(false)
@@ -56,6 +57,15 @@ export default function LocalSalePage() {
     }, 300)
     return () => clearTimeout(timer)
   }, [buscarProducto])
+
+  useEffect(() => {
+    let alive = true
+    if (items.length === 0) { setQuote({ items: [], total: 0 }); return () => { alive = false } }
+    ventaLocalService.quote(items)
+      .then((data) => { if (alive) setQuote(data) })
+      .catch((err) => { if (alive) setError(err.message || 'No se pudo cotizar la venta') })
+    return () => { alive = false }
+  }, [items])
 
   const clientesFiltrados = customers.filter((c) => {
     const q = buscarCliente.toLowerCase()
@@ -81,7 +91,6 @@ export default function LocalSalePage() {
       varId: variante ? variante.id : null,
       nombre: productoSeleccionado.nombre,
       varLabel: variante ? [variante.talla, variante.color].filter(Boolean).join(' / ') : null,
-      precio: productoSeleccionado.precio,
       cantidad: Number(cantidad) || 1,
     }])
     setProductoSeleccionado(null)
@@ -89,8 +98,6 @@ export default function LocalSalePage() {
   }
 
   const quitarItem = (idx) => setItems((prev) => prev.filter((_, i) => i !== idx))
-
-  const total = items.reduce((sum, i) => sum + i.precio * i.cantidad, 0)
 
   const handleSubmit = async () => {
     setError('')
@@ -245,25 +252,28 @@ export default function LocalSalePage() {
 
         {items.length > 0 && (
           <div className="divide-y divide-gray-50 border-t border-gray-100 pt-2">
-            {items.map((item, idx) => (
+            {items.map((item, idx) => {
+              const priced = quote.items?.[idx]
+              return (
               <div key={idx} className="flex items-center justify-between py-2.5">
                 <div>
                   <p className="text-sm font-semibold text-black">{item.nombre}</p>
                   <p className="text-xs text-gray-400">
-                    {item.varLabel ? `${item.varLabel} · ` : ''}x{item.cantidad} · {fmt(item.precio)} c/u
+                    {item.varLabel ? `${item.varLabel} · ` : ''}x{item.cantidad} · {fmt(priced?.precio)} c/u
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-black">{fmt(item.precio * item.cantidad)}</span>
+                  <span className="text-sm font-bold text-black">{fmt(priced?.subtotal)}</span>
                   <button onClick={() => quitarItem(idx)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600">
                     <Trash2 size={14} />
                   </button>
                 </div>
               </div>
-            ))}
+              )
+            })}
             <div className="flex items-center justify-between pt-3">
               <span className="text-sm font-bold text-black">Total</span>
-              <span className="text-lg font-black text-black">{fmt(total)}</span>
+              <span className="text-lg font-black text-black">{fmt(quote.total)}</span>
             </div>
           </div>
         )}

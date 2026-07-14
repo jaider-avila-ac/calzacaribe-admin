@@ -20,7 +20,7 @@ function detalleTexto(item) {
     return `${d.estado_anterior ?? '?'} → ${d.estado_nuevo ?? '?'}`
   }
   if (item.accion === 'venta_local.creada') {
-    return `Pedido #${d.numero ?? item.entidad_id} — ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format((d.total_centavos ?? 0) / 100)}`
+    return `Pedido #${d.numero ?? item.entidad_id} — ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(d.total ?? 0)}`
   }
   if (item.accion?.startsWith('colaborador.') && d.rol) {
     return `Rol: ${d.rol}${d.email ? ` · ${d.email}` : ''}`

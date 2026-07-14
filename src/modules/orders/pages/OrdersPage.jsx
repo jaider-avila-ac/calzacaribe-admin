@@ -30,7 +30,7 @@ const ESTADO_LABEL = {
 
 export default function OrdersPage() {
   const navigate = useNavigate()
-  const { orders, loading, updateEstado } = useOrders()
+  const { orders, counts, loading, updateEstado } = useOrders()
   const [search, setSearch] = useState('')
   const [filterEstado, setFilterEstado] = useState('')
   const [openMenu, setOpenMenu] = useState(null)
@@ -62,11 +62,11 @@ export default function OrdersPage() {
           </div>
           <div className="flex gap-1.5 flex-wrap">
             <button onClick={() => setFilterEstado('')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterEstado === '' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              Todos ({orders.length})
+              Todos ({counts.total ?? 0})
             </button>
             {ESTADOS.map((e) => (
               <button key={e} onClick={() => setFilterEstado(e)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterEstado === e ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                {ESTADO_LABEL[e]} ({orders.filter((o) => o.estado === e).length})
+                {ESTADO_LABEL[e]} ({counts[e] ?? 0})
               </button>
             ))}
           </div>

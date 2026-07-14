@@ -9,8 +9,6 @@ function StockStatus({ estadoStock }) {
   return <Badge variant="success">Disponible</Badge>
 }
 
-const ESTADO_PRIORIDAD = { agotado: 2, bajo: 1, disponible: 0 }
-
 /** Agrupa las variantes planas por producto para la tabla en árbol (producto → variantes). */
 function agruparPorProducto(items) {
   const grupos = new Map()
@@ -22,11 +20,8 @@ function agruparPorProducto(items) {
   }
   return Array.from(grupos.values()).map((g) => ({
     ...g,
-    totalStock: g.variantes.reduce((sum, v) => sum + Number(v.stock ?? 0), 0),
-    estado_stock: g.variantes.reduce(
-      (peor, v) => ESTADO_PRIORIDAD[v.estado_stock] > ESTADO_PRIORIDAD[peor] ? v.estado_stock : peor,
-      'disponible'
-    ),
+    totalStock: g.variantes[0]?.total_stock_producto ?? 0,
+    estado_stock: g.variantes[0]?.estado_producto ?? 'disponible',
   }))
 }
 

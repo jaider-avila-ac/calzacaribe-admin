@@ -3,6 +3,7 @@ import { orderService } from '../../../services/orderService'
 
 export function useOrders() {
   const [orders,  setOrders]  = useState([])
+  const [counts, setCounts] = useState({ total: 0 })
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
 
@@ -10,8 +11,9 @@ export function useOrders() {
     setLoading(true)
     setError(null)
     try {
-      const data = await orderService.getAll()
+      const [data, backendCounts] = await Promise.all([orderService.getAll(), orderService.getCounts()])
       setOrders(Array.isArray(data) ? data : [])
+      setCounts(backendCounts ?? { total: 0 })
     } catch (e) {
       setError(e.message)
     } finally {
@@ -31,5 +33,5 @@ export function useOrders() {
     load()
   }
 
-  return { orders, loading, error, reload: load, updateEstado, resolverAlertaStock }
+  return { orders, counts, loading, error, reload: load, updateEstado, resolverAlertaStock }
 }
