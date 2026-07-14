@@ -13,7 +13,6 @@ const INITIAL = {
   direccion: 'Cra 54 # 72-150, Piso 2',
   sitioWeb: 'www.calzacaribe.co',
   moneda: 'COP',
-  envioBase: '12000',
   whatsapp: '3155550001',
 }
 
@@ -24,16 +23,20 @@ export default function SettingsPage() {
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => getTheme())
 
-  const [envioGratisActivo, setEnvioGratisActivo] = useState(true)
-  const [envioGratisDesde, setEnvioGratisDesde] = useState('200000')
+  const [envioGratisActivo, setEnvioGratisActivo] = useState(false)
+  const [envioGratisDesde, setEnvioGratisDesde] = useState('')
+  const [envioCosto, setEnvioCosto] = useState('')
   const [dominioStaff, setDominioStaff] = useState('')
+  const [envioConfigLoaded, setEnvioConfigLoaded] = useState(false)
 
   useEffect(() => {
     tiendaConfigService.get()
       .then((cfg) => {
-        setEnvioGratisActivo(cfg?.envio_gratis_activo ?? true)
-        setEnvioGratisDesde(String(cfg?.envio_gratis_desde ?? 200000))
+        setEnvioGratisActivo(Boolean(cfg?.envio_gratis_activo))
+        setEnvioGratisDesde(cfg?.envio_gratis_desde != null ? String(cfg.envio_gratis_desde) : '')
+        setEnvioCosto(cfg?.envio_costo != null ? String(cfg.envio_costo) : '')
         setDominioStaff(cfg?.dominio_staff ?? '')
+        setEnvioConfigLoaded(true)
       })
       .catch(() => {})
   }, [])
@@ -53,6 +56,7 @@ export default function SettingsPage() {
       await tiendaConfigService.update({
         envioGratisActivo,
         envioGratisDesde: Number(envioGratisDesde) || 0,
+        envioCosto: Number(envioCosto) || 0,
         dominioStaff,
       })
       setSaved(true)
@@ -152,7 +156,14 @@ export default function SettingsPage() {
                 <option value="USD">USD - Dólar</option>
               </select>
             </div>
-            <Input label="Costo de envío base (COP)" type="number" value={form.envioBase} onChange={set('envioBase')} />
+            <Input
+              label="Costo de envío base (COP)"
+              type="number"
+              value={envioCosto}
+              onChange={(e) => setEnvioCosto(e.target.value)}
+              disabled={!envioConfigLoaded}
+              placeholder={envioConfigLoaded ? '' : 'Cargando...'}
+            />
           </div>
 
           <div className="pt-2 border-t border-gray-100 space-y-3">
@@ -166,7 +177,8 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setEnvioGratisActivo((v) => !v)}
-                className={`relative h-7 w-14 rounded-full transition-colors flex-shrink-0 ${envioGratisActivo ? 'bg-admin-accent' : 'bg-gray-200'}`}
+                disabled={!envioConfigLoaded}
+                className={`relative h-7 w-14 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${envioGratisActivo ? 'bg-admin-accent' : 'bg-gray-200'}`}
                 aria-pressed={envioGratisActivo}
                 aria-label="Activar envío gratis por monto mínimo"
               >
@@ -178,6 +190,7 @@ export default function SettingsPage() {
               type="number"
               value={envioGratisDesde}
               onChange={(e) => setEnvioGratisDesde(e.target.value)}
+              placeholder={envioConfigLoaded ? '' : 'Cargando...'}
               disabled={!envioGratisActivo}
               className={!envioGratisActivo ? 'opacity-50' : ''}
             />
