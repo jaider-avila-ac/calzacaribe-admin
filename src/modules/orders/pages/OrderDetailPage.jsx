@@ -47,6 +47,8 @@ export default function OrderDetailPage() {
   const [seguimiento, setSeguimiento] = useState(SEGUIMIENTO_VACIO)
   const [savingSeguimiento, setSavingSeguimiento] = useState(false)
   const [seguimientoError, setSeguimientoError] = useState('')
+  const [savingEstado, setSavingEstado] = useState(false)
+  const [estadoError, setEstadoError] = useState('')
 
   const load = () => {
     setLoading(true)
@@ -65,6 +67,21 @@ export default function OrderDetailPage() {
   }
 
   useEffect(load, [id])
+
+  const handleCambiarEstado = async (e) => {
+    const nuevoEstado = e.target.value
+    if (nuevoEstado === order.estado) return
+    setSavingEstado(true)
+    setEstadoError('')
+    try {
+      await orderService.updateEstado(id, nuevoEstado)
+      load()
+    } catch (err) {
+      setEstadoError(err.message || 'No se pudo cambiar el estado')
+    } finally {
+      setSavingEstado(false)
+    }
+  }
 
   const handleResolverAlerta = async () => {
     setResolving(true)
@@ -123,9 +140,23 @@ export default function OrderDetailPage() {
           <h1 className="page-title">{order.numero}</h1>
           <p className="page-subtitle">{formatDate(order.creado_en)}</p>
         </div>
-        <Badge variant={BADGE_MAP[order.estado]} className="ml-auto">
-          {ESTADO_LABEL[order.estado] ?? order.estado}
-        </Badge>
+        <div className="ml-auto flex flex-col items-end gap-1">
+          {order.estado === 'pendiente_pago' ? (
+            <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>
+          ) : (
+            <select
+              value={order.estado}
+              onChange={handleCambiarEstado}
+              disabled={savingEstado}
+              className={`text-xs font-bold rounded-lg border-0 px-3 py-1.5 cursor-pointer disabled:opacity-60 ${BADGE_MAP[order.estado] === 'success' ? 'bg-green-100 text-green-700' : BADGE_MAP[order.estado] === 'danger' ? 'bg-red-100 text-red-600' : BADGE_MAP[order.estado] === 'info' ? 'bg-blue-100 text-blue-700' : 'bg-gray-800 text-white'}`}
+            >
+              {ESTADOS_PEDIDO.map((e) => (
+                <option key={e} value={e}>{ESTADO_LABEL[e]}</option>
+              ))}
+            </select>
+          )}
+          {estadoError && <span className="text-[11px] text-red-500">{estadoError}</span>}
+        </div>
       </div>
 
       {/* Alerta de stock insuficiente al confirmar el pago */}

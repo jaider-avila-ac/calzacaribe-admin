@@ -23,15 +23,10 @@ export function useOrders() {
 
   useEffect(() => { load() }, [load])
 
-  const updateEstado = async (id, estado) => {
-    await orderService.updateEstado(id, estado)
-    load()
-  }
-
   const resolverAlertaStock = async (id) => {
     await orderService.resolverAlertaStock(id)
     load()
   }
 
-  return { orders, counts, loading, error, reload: load, updateEstado, resolverAlertaStock }
+  return { orders, counts, loading, error, reload: load, resolverAlertaStock }
 }

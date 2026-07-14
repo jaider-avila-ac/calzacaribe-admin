@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, ChevronDown, Search, AlertTriangle } from 'lucide-react'
+import { Eye, Search, AlertTriangle } from 'lucide-react'
 import { useOrders } from '../hooks/useOrders'
 import { ESTADOS_PEDIDO } from '../../../services/orderService'
 import Badge from '../../../components/ui/Badge'
@@ -30,10 +30,9 @@ const ESTADO_LABEL = {
 
 export default function OrdersPage() {
   const navigate = useNavigate()
-  const { orders, counts, loading, updateEstado } = useOrders()
+  const { orders, counts, loading } = useOrders()
   const [search, setSearch] = useState('')
   const [filterEstado, setFilterEstado] = useState('')
-  const [openMenu, setOpenMenu] = useState(null)
 
   const filtered = orders.filter((o) => {
     const q = search.toLowerCase()
@@ -45,11 +44,6 @@ export default function OrdersPage() {
     const matchEstado = filterEstado ? o.estado === filterEstado : true
     return matchSearch && matchEstado
   })
-
-  const handleEstado = (id, estado) => {
-    updateEstado(id, estado)
-    setOpenMenu(null)
-  }
 
   return (
     <div className="space-y-4">
@@ -113,26 +107,7 @@ export default function OrdersPage() {
                   <td className="table-cell px-4 text-gray-500">-</td>
                   <td className="table-cell px-4 text-right font-bold text-black">{formatCurrency(order.total)}</td>
                   <td className="table-cell px-4 text-center">
-                    <div className="relative inline-block">
-                      <button
-                        onClick={() => setOpenMenu(openMenu === order.id ? null : order.id)}
-                        className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                      >
-                        <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>
-                        <ChevronDown size={12} className="text-gray-400" />
-                      </button>
-                      {openMenu === order.id && (
-                        <div className="absolute z-10 top-7 left-1/2 -translate-x-1/2 bg-white border border-gray-100 rounded-xl shadow-xl py-1 min-w-36">
-                          {ESTADOS.map((e) => (
-                            <button key={e} onClick={() => handleEstado(order.id, e)}
-                              className={`w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors ${order.estado === e ? 'font-bold text-black' : 'text-gray-600'}`}
-                            >
-                              {ESTADO_LABEL[e]}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>
                   </td>
                   <td className="table-cell px-4 text-center">
                     <button onClick={() => navigate(`/pedidos/${order.id}`)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Ver detalle">
