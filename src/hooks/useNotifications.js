@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { notificationService } from '../services/notificationService'
 import { connectNotifications, disconnectNotifications } from '../services/notificationSocket'
+import { playNotificationSound } from '../utils/notificationSound'
 
 export function useNotifications() {
   const [items, setItems] = useState([])
@@ -12,7 +13,10 @@ export function useNotifications() {
   useEffect(() => {
     load()
     connectNotifications({
-      onNotification: (n) => setItems((prev) => [n, ...prev]),
+      onNotification: (n) => {
+        setItems((prev) => [n, ...prev])
+        playNotificationSound()
+      },
     })
     return () => disconnectNotifications()
   }, [load])

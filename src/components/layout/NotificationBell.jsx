@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Bell, CheckCheck, ShoppingBag, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { useNotifications } from '../../hooks/useNotifications'
+
+function rutaPara(n) {
+  if (n.entidad_tipo === 'pedido' && n.entidad_id) return `/pedidos/${n.entidad_id}`
+  return null
+}
 
 const TIPO_META = {
   pedido_nuevo:          { Icon: ShoppingBag,   className: 'text-black' },
@@ -32,6 +38,16 @@ export default function NotificationBell() {
   const { items, unreadCount, markRead, markAllRead } = useNotifications()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const navigate = useNavigate()
+
+  const handleClick = (n) => {
+    if (!n.leida) markRead(n.id)
+    const ruta = rutaPara(n)
+    if (ruta) {
+      setOpen(false)
+      navigate(ruta)
+    }
+  }
 
   useEffect(() => {
     function onClickOutside(e) {
@@ -76,7 +92,7 @@ export default function NotificationBell() {
             return (
               <button
                 key={n.id}
-                onClick={() => markRead(n.id)}
+                onClick={() => handleClick(n)}
                 className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors ${n.leida ? '' : 'bg-gray-50/60'}`}
               >
                 <Icon size={16} className={`flex-shrink-0 mt-0.5 ${className}`} />

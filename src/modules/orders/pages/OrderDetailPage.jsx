@@ -126,9 +126,18 @@ export default function OrderDetailPage() {
       {/* Link de seguimiento del envío (Coordinadora, Servientrega, etc.) */}
       {order.estado !== 'pendiente_pago' && (
         <div className="section-card p-5 space-y-3">
-          <h2 className="text-sm font-bold text-black flex items-center gap-1.5">
-            <Link2 size={15} /> Link de seguimiento
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-black flex items-center gap-1.5">
+              <Link2 size={15} /> Link de seguimiento
+            </h2>
+            {order.confirmado_cliente_en ? (
+              <span className="text-xs font-semibold text-green-600">
+                Cliente confirmó recibido — {formatDate(order.confirmado_cliente_en)}
+              </span>
+            ) : (
+              <span className="text-xs text-gray-400">El cliente aún no confirmó recibido</span>
+            )}
+          </div>
           <div className="flex gap-2">
             <input
               type="text"
