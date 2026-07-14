@@ -12,5 +12,11 @@ export const orderService = {
   getById:      (id)     => api.get(`${BASE}/${id}`),
   updateEstado: (id, estado) => api.patch(`${BASE}/${id}/estado`, { estado }),
   resolverAlertaStock: (id) => api.post(`${BASE}/${id}/resolver-alerta-stock`),
-  updateLinkSeguimiento: (id, link) => api.patch(`${BASE}/${id}/link-seguimiento`, { link }),
+  updateSeguimiento: (id, { transportadora, codigoRastreo, link, mostrar }) =>
+    api.patch(`${BASE}/${id}/link-seguimiento`, {
+      transportadora,
+      codigo_rastreo: codigoRastreo,
+      link,
+      mostrar,
+    }),
 }

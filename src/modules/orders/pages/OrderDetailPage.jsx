@@ -25,6 +25,17 @@ const ESTADO_LABEL = {
   devuelto:       'Devuelto',
 }
 
+// Lista fija de transportadoras — el backend solo guarda el texto, no valida contra esto.
+const TRANSPORTADORAS = ['Envía', 'Coordinadora', 'Interrapidísimo', 'Servientrega', 'Otra']
+
+const MOSTRAR_OPCIONES = [
+  { value: 'ambos',  label: 'Código y link' },
+  { value: 'codigo', label: 'Solo código' },
+  { value: 'link',   label: 'Solo link' },
+]
+
+const SEGUIMIENTO_VACIO = { transportadora: '', codigoRastreo: '', link: '', mostrar: 'ambos' }
+
 export default function OrderDetailPage() {
   const { id }   = useParams()
   const navigate = useNavigate()
@@ -33,14 +44,22 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [resolving, setResolving] = useState(false)
-  const [linkInput, setLinkInput] = useState('')
-  const [savingLink, setSavingLink] = useState(false)
-  const [linkError, setLinkError] = useState('')
+  const [seguimiento, setSeguimiento] = useState(SEGUIMIENTO_VACIO)
+  const [savingSeguimiento, setSavingSeguimiento] = useState(false)
+  const [seguimientoError, setSeguimientoError] = useState('')
 
   const load = () => {
     setLoading(true)
     orderService.getById(id)
-      .then((data) => { setOrder(data); setLinkInput(data.link_seguimiento ?? '') })
+      .then((data) => {
+        setOrder(data)
+        setSeguimiento({
+          transportadora: data.transportadora ?? '',
+          codigoRastreo: data.codigo_rastreo ?? '',
+          link: data.link_seguimiento ?? '',
+          mostrar: data.mostrar_seguimiento ?? 'ambos',
+        })
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }
@@ -57,16 +76,24 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handleGuardarLink = async () => {
-    setSavingLink(true)
-    setLinkError('')
+  const setSeguimientoField = (field) => (e) =>
+    setSeguimiento((prev) => ({ ...prev, [field]: e.target.value }))
+
+  const handleGuardarSeguimiento = async () => {
+    setSavingSeguimiento(true)
+    setSeguimientoError('')
     try {
-      await orderService.updateLinkSeguimiento(id, linkInput.trim())
+      await orderService.updateSeguimiento(id, {
+        transportadora: seguimiento.transportadora.trim(),
+        codigoRastreo: seguimiento.codigoRastreo.trim(),
+        link: seguimiento.link.trim(),
+        mostrar: seguimiento.mostrar,
+      })
       load()
     } catch (err) {
-      setLinkError(err.message || 'No se pudo guardar el link')
+      setSeguimientoError(err.message || 'No se pudo guardar')
     } finally {
-      setSavingLink(false)
+      setSavingSeguimiento(false)
     }
   }
 
@@ -123,12 +150,12 @@ export default function OrderDetailPage() {
         </div>
       )}
 
-      {/* Link de seguimiento del envío (Coordinadora, Servientrega, etc.) */}
+      {/* Seguimiento del envío (transportadora, código de rastreo y/o link) */}
       {order.estado !== 'pendiente_pago' && (
         <div className="section-card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-black flex items-center gap-1.5">
-              <Link2 size={15} /> Link de seguimiento
+              <Link2 size={15} /> Seguimiento del envío
             </h2>
             {order.confirmado_cliente_en ? (
               <span className="text-xs font-semibold text-green-600">
@@ -138,33 +165,77 @@ export default function OrderDetailPage() {
               <span className="text-xs text-gray-400">El cliente aún no confirmó recibido</span>
             )}
           </div>
-          <div className="flex gap-2">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="label-field">Transportadora</label>
+              <select
+                value={seguimiento.transportadora}
+                onChange={setSeguimientoField('transportadora')}
+                className="input-field bg-white"
+              >
+                <option value="">Selecciona...</option>
+                {TRANSPORTADORAS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label-field">Código de rastreo / guía</label>
+              <input
+                type="text"
+                value={seguimiento.codigoRastreo}
+                onChange={setSeguimientoField('codigoRastreo')}
+                placeholder="Ej: 123456789"
+                className="input-field"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label-field">Link de seguimiento</label>
             <input
               type="text"
-              value={linkInput}
-              onChange={(e) => setLinkInput(e.target.value)}
+              value={seguimiento.link}
+              onChange={setSeguimientoField('link')}
               placeholder="https://..."
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-black transition-colors"
+              className="input-field"
             />
-            <button
-              onClick={handleGuardarLink}
-              disabled={savingLink}
-              className="btn-primary text-xs px-4"
-            >
-              {savingLink ? 'Guardando…' : 'Guardar'}
-            </button>
           </div>
-          {linkError && <p className="text-xs text-red-500">{linkError}</p>}
-          {order.link_seguimiento && (
-            <a
-              href={order.link_seguimiento}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-admin-accent hover:underline"
-            >
-              Abrir link actual →
-            </a>
-          )}
+
+          <div>
+            <label className="label-field">Qué le muestra a la tienda</label>
+            <div className="flex gap-4 pt-1">
+              {MOSTRAR_OPCIONES.map((op) => (
+                <label key={op.value} className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="mostrar_seguimiento"
+                    value={op.value}
+                    checked={seguimiento.mostrar === op.value}
+                    onChange={setSeguimientoField('mostrar')}
+                    className="accent-black"
+                  />
+                  {op.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <button onClick={handleGuardarSeguimiento} disabled={savingSeguimiento} className="btn-primary text-xs px-4">
+              {savingSeguimiento ? 'Guardando…' : 'Guardar'}
+            </button>
+            {order.link_seguimiento && (
+              <a
+                href={order.link_seguimiento}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-admin-accent hover:underline"
+              >
+                Abrir link actual →
+              </a>
+            )}
+          </div>
+          {seguimientoError && <p className="text-xs text-red-500">{seguimientoError}</p>}
         </div>
       )}
 
