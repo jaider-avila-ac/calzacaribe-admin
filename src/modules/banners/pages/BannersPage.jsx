@@ -22,13 +22,13 @@ function emptyForm() {
 function BannerPreview({ tipo, url, isPending }) {
   if (!url) {
     return (
-      <div className={`${HERO_RATIO} w-full rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center`}>
+      <div className={`${HERO_RATIO} w-full border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center`}>
         <p className="text-xs text-gray-400">Sin archivo</p>
       </div>
     )
   }
   return (
-    <div className={`${HERO_RATIO} w-full rounded-xl overflow-hidden bg-black relative ${isPending ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`}>
+    <div className={`${HERO_RATIO} w-full overflow-hidden bg-black relative ${isPending ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`}>
       {tipo === 'video'
         ? <video src={url} className="w-full h-full object-cover" muted loop autoPlay playsInline />
         : <img src={url} alt="" className="w-full h-full object-cover" />}
@@ -202,8 +202,8 @@ export default function BannersPage() {
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <span className="text-sm text-gray-600">Banner activo</span>
             <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
+              className={`relative inline-flex h-6 w-11 items-center transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
 
@@ -226,17 +226,17 @@ function BannerRow({ b, onEdit, onDelete, onMoveUp, onMoveDown }) {
       {/* Controles de orden */}
       <div className="flex flex-col gap-0.5 flex-shrink-0">
         <button onClick={onMoveUp} disabled={!onMoveUp}
-          className="p-0.5 rounded text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+          className="p-0.5 text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
           <ChevronUp size={14} />
         </button>
         <button onClick={onMoveDown} disabled={!onMoveDown}
-          className="p-0.5 rounded text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+          className="p-0.5 text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
           <ChevronDown size={14} />
         </button>
       </div>
 
       {/* Miniatura */}
-      <div className="w-20 h-12 rounded-lg overflow-hidden bg-black flex-shrink-0">
+      <div className="w-20 h-12 overflow-hidden bg-black flex-shrink-0">
         {b.tipo === 'video'
           ? <video src={b.url} className="w-full h-full object-cover" muted />
           : <img src={b.url} alt="" className="w-full h-full object-cover" />}
@@ -256,11 +256,11 @@ function BannerRow({ b, onEdit, onDelete, onMoveUp, onMoveDown }) {
 
       <div className="flex gap-1">
         <button onClick={onEdit}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
+          className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
           <Edit2 size={14} />
         </button>
         <button onClick={onDelete}
-          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
+          className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
           <Trash2 size={14} />
         </button>
       </div>

@@ -127,7 +127,7 @@ export default function ColeccionesPage() {
           {colecciones.map((c) => (
             <div key={c.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
               {/* Imagen */}
-              <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+              <div className="w-16 h-12 overflow-hidden bg-gray-100 flex-shrink-0">
                 {c.imagen_url ? (
                   <img src={c.imagen_url} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -144,11 +144,11 @@ export default function ColeccionesPage() {
               <Badge variant={c.activo ? 'success' : 'danger'}>{c.activo ? 'Activa' : 'Inactiva'}</Badge>
               <div className="flex gap-1">
                 <button onClick={() => openEdit(c)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
+                  className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
                   <Edit2 size={14} />
                 </button>
                 <button onClick={() => handleDelete(c)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
+                  className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -177,8 +177,8 @@ export default function ColeccionesPage() {
             <div className="flex items-center justify-between pt-5">
               <span className="text-sm text-gray-600">Activa</span>
               <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
+                className={`relative inline-flex h-6 w-11 items-center transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
+                <span className={`inline-block h-4 w-4 transform bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function ColeccionesPage() {
                 placeholder="Buscar producto…" className="text-xs input-field w-44 py-1.5"
               />
             </div>
-            <div className="border border-gray-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+            <div className="border border-gray-200 overflow-hidden max-h-56 overflow-y-auto">
               {filteredProductos.length === 0 ? (
                 <p className="text-xs text-gray-400 text-center py-6">Sin resultados</p>
               ) : (
@@ -204,7 +204,7 @@ export default function ColeccionesPage() {
                     <button key={p.id} type="button" onClick={() => toggleProducto(p.id)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-gray-50 last:border-0
                         ${selected ? 'bg-admin-accent-subtle' : 'hover:bg-gray-50'}`}>
-                      <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors
+                      <div className={`w-4 h-4 flex items-center justify-center flex-shrink-0 border transition-colors
                         ${selected ? 'bg-black border-black' : 'border-gray-300'}`}>
                         {selected && <Check size={10} className="text-white" />}
                       </div>

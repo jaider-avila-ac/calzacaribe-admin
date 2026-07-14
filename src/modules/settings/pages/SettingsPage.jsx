@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Moon, Save, Store, Sun, Phone, MapPin } from 'lucide-react'
+import { CreditCard, Mail, Moon, Save, Store, Sun, Phone, MapPin } from 'lucide-react'
 import Input from '../../../components/ui/Input'
 import { getTheme, setTheme as saveTheme } from '../../../services/themeService'
 import { tiendaConfigService } from '../../../services/tiendaConfigService'
@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [envioGratisDesde, setEnvioGratisDesde] = useState('')
   const [envioCosto, setEnvioCosto] = useState('')
   const [dominioStaff, setDominioStaff] = useState('')
+  const [emailNotificacionPedidos, setEmailNotificacionPedidos] = useState('')
   const [envioConfigLoaded, setEnvioConfigLoaded] = useState(false)
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function SettingsPage() {
         setEnvioGratisDesde(cfg?.envio_gratis_desde != null ? String(cfg.envio_gratis_desde) : '')
         setEnvioCosto(cfg?.envio_costo != null ? String(cfg.envio_costo) : '')
         setDominioStaff(cfg?.dominio_staff ?? '')
+        setEmailNotificacionPedidos(cfg?.email_notificacion_pedidos ?? '')
         setEnvioConfigLoaded(true)
       })
       .catch(() => {})
@@ -58,6 +60,7 @@ export default function SettingsPage() {
         envioGratisDesde: Number(envioGratisDesde) || 0,
         envioCosto: Number(envioCosto) || 0,
         dominioStaff,
+        emailNotificacionPedidos,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -84,11 +87,11 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={toggleTheme}
-              className={`relative h-7 w-14 rounded-full transition-colors flex-shrink-0 ${isDark ? 'bg-admin-accent' : 'bg-gray-200'}`}
+              className={`relative h-7 w-14 transition-colors flex-shrink-0 ${isDark ? 'bg-admin-accent' : 'bg-gray-200'}`}
               aria-pressed={isDark}
               aria-label="Cambiar modo oscuro"
             >
-              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${isDark ? 'translate-x-8' : 'translate-x-1'}`} />
+              <span className={`absolute top-1 h-5 w-5 bg-white shadow-sm transition-transform ${isDark ? 'translate-x-8' : 'translate-x-1'}`} />
             </button>
           </div>
         </div>
@@ -178,11 +181,11 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => setEnvioGratisActivo((v) => !v)}
                 disabled={!envioConfigLoaded}
-                className={`relative h-7 w-14 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${envioGratisActivo ? 'bg-admin-accent' : 'bg-gray-200'}`}
+                className={`relative h-7 w-14 transition-colors flex-shrink-0 disabled:opacity-50 ${envioGratisActivo ? 'bg-admin-accent' : 'bg-gray-200'}`}
                 aria-pressed={envioGratisActivo}
                 aria-label="Activar envío gratis por monto mínimo"
               >
-                <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${envioGratisActivo ? 'translate-x-8' : 'translate-x-1'}`} />
+                <span className={`absolute top-1 h-5 w-5 bg-white shadow-sm transition-transform ${envioGratisActivo ? 'translate-x-8' : 'translate-x-1'}`} />
               </button>
             </div>
             <Input
@@ -194,6 +197,28 @@ export default function SettingsPage() {
               disabled={!envioGratisActivo}
               className={!envioGratisActivo ? 'opacity-50' : ''}
             />
+          </div>
+        </div>
+
+        {/* Notificaciones por correo */}
+        <div className="section-card p-6 space-y-4">
+          <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Mail size={16} className="text-gray-500" />
+            <h2 className="text-sm font-bold text-black">Notificaciones por correo</h2>
+          </div>
+          <div>
+            <Input
+              label="Correo para avisos de nuevos pedidos"
+              type="email"
+              value={emailNotificacionPedidos}
+              onChange={(e) => setEmailNotificacionPedidos(e.target.value)}
+              disabled={!envioConfigLoaded}
+              placeholder={envioConfigLoaded ? 'ej. ventas@tuempresa.com' : 'Cargando...'}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Cada vez que un cliente pague un pedido, llega un correo a esta dirección además de la
+              notificación dentro del panel. Déjalo vacío para no recibir correos.
+            </p>
           </div>
         </div>
 

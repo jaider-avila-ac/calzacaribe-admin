@@ -147,7 +147,7 @@ export default function CollaboratorsPage() {
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="table-cell px-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-violet-950 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        <div className="w-9 h-9 bg-violet-950 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                           {c.nombre?.charAt(0) ?? <Users size={14} />}
                         </div>
                         <div>
@@ -169,7 +169,7 @@ export default function CollaboratorsPage() {
                     <td className="table-cell px-4">
                       <div className="flex items-center justify-center gap-1">
                         {c.rol !== 'admin' && (
-                          <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Editar">
+                          <button onClick={() => openEdit(c)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Editar">
                             <Pencil size={14} />
                           </button>
                         )}

@@ -95,9 +95,9 @@ export default function ReportsPage() {
             {byEstado.map(({ estado, cantidad, porcentaje_grafica }) => (
               <div key={estado} className="flex items-center gap-3">
                 <span className="text-xs text-gray-500 w-24 flex-shrink-0">{ESTADO_LABEL[estado] ?? estado}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                <div className="flex-1 bg-gray-100 h-2.5 overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${ESTADO_COLORS[estado] ?? 'bg-gray-400'} transition-all`}
+                    className={`h-full ${ESTADO_COLORS[estado] ?? 'bg-gray-400'} transition-all`}
                     style={{ width: `${porcentaje_grafica}%` }}
                   />
                 </div>
@@ -115,8 +115,8 @@ export default function ReportsPage() {
             {porCategoria.map(({ categoria, total, unidades, porcentaje_grafica }) => (
               <div key={categoria} className="flex items-center gap-3">
                 <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{categoria}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                  <div className="h-full rounded-full bg-black transition-all" style={{ width: `${porcentaje_grafica}%` }} />
+                <div className="flex-1 bg-gray-100 h-2.5 overflow-hidden">
+                  <div className="h-full bg-black transition-all" style={{ width: `${porcentaje_grafica}%` }} />
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs font-bold text-black">{formatCurrency(total)}</p>
@@ -137,13 +137,13 @@ export default function ReportsPage() {
             <div className="space-y-3">
               {topProductos.map((p, i) => (
                 <div key={p.prd_id} className="flex items-center gap-3">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-admin-accent text-admin-accent-contrast' : 'bg-gray-100 text-gray-600'}`}>
+                  <div className={`w-6 h-6 flex items-center justify-center text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-admin-accent text-admin-accent-contrast' : 'bg-gray-100 text-gray-600'}`}>
                     {i + 1}
                   </div>
                   {p.imagen_url ? (
-                    <img src={p.imagen_url} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-100 flex-shrink-0" />
+                    <img src={p.imagen_url} alt="" className="w-9 h-9 object-cover bg-gray-100 flex-shrink-0" />
                   ) : (
-                    <div className="w-9 h-9 rounded-lg bg-gray-100 flex-shrink-0" />
+                    <div className="w-9 h-9 bg-gray-100 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-black truncate">{p.nombre}</p>

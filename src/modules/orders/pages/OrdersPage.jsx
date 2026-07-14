@@ -55,11 +55,11 @@ export default function OrdersPage() {
             <input placeholder="Buscar por #pedido o cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 input-field text-sm" />
           </div>
           <div className="flex gap-1.5 flex-wrap">
-            <button onClick={() => setFilterEstado('')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterEstado === '' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            <button onClick={() => setFilterEstado('')} className={`px-3 py-1.5 text-xs font-medium transition-all ${filterEstado === '' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               Todos ({counts.total ?? 0})
             </button>
             {ESTADOS.map((e) => (
-              <button key={e} onClick={() => setFilterEstado(e)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterEstado === e ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              <button key={e} onClick={() => setFilterEstado(e)} className={`px-3 py-1.5 text-xs font-medium transition-all ${filterEstado === e ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                 {ESTADO_LABEL[e]} ({counts[e] ?? 0})
               </button>
             ))}
@@ -110,7 +110,7 @@ export default function OrdersPage() {
                     <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>
                   </td>
                   <td className="table-cell px-4 text-center">
-                    <button onClick={() => navigate(`/pedidos/${order.id}`)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Ver detalle">
+                    <button onClick={() => navigate(`/pedidos/${order.id}`)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Ver detalle">
                       <Eye size={15} />
                     </button>
                   </td>

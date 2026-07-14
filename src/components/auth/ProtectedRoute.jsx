@@ -25,7 +25,7 @@ export default function ProtectedRoute() {
   if (status === 'checking') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-7 h-7 border-2 border-black border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-black border-t-transparent animate-spin" />
       </div>
     )
   }

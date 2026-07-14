@@ -74,7 +74,7 @@ export default function CustomersPage() {
                 <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                   <td className="table-cell px-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-violet-950 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      <div className="w-9 h-9 bg-violet-950 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                         {customerName(c).charAt(0)}
                       </div>
                       <div>
@@ -91,10 +91,10 @@ export default function CustomersPage() {
                   </td>
                   <td className="table-cell px-4">
                     <div className="flex items-center justify-center gap-1">
-                      <Link to={`/clientes/${c.id}`} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Ver cliente">
+                      <Link to={`/clientes/${c.id}`} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Ver cliente">
                         <Eye size={14} />
                       </Link>
-                      <button onClick={() => handleDelete(c)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Desactivar cliente">
+                      <button onClick={() => handleDelete(c)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Desactivar cliente">
                         <Trash2 size={14} />
                       </button>
                     </div>

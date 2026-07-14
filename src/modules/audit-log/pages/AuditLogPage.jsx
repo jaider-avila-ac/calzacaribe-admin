@@ -108,12 +108,12 @@ export default function AuditLogPage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-3 py-3 border-t border-gray-100">
                 <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">
                   <ChevronLeft size={16} />
                 </button>
                 <span className="text-xs text-gray-400">Página {page + 1} de {totalPages}</span>
                 <button onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">
                   <ChevronRight size={16} />
                 </button>
               </div>

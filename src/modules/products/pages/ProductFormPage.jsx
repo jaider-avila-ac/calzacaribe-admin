@@ -409,7 +409,7 @@ export default function ProductFormPage() {
     <div className="max-w-4xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/productos')} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+        <button onClick={() => navigate('/productos')} className="p-2 hover:bg-gray-100 transition-colors">
           <ArrowLeft size={18} />
         </button>
         <div>
@@ -479,14 +479,14 @@ export default function ProductFormPage() {
                     const activo = campo.key in form.ficha_tecnica
                     return (
                       <div key={campo.key}
-                        className={`rounded-xl border p-3 transition-colors ${activo ? 'border-black bg-gray-50' : 'border-gray-200'}`}>
+                        className={`border p-3 transition-colors ${activo ? 'border-black bg-gray-50' : 'border-gray-200'}`}>
                         <div className="flex items-center justify-between mb-2">
                           <span className={`text-xs font-semibold ${activo ? 'text-black' : 'text-gray-400'}`}>
                             {campo.label}
                           </span>
                           <button type="button" onClick={() => toggleCampo(campo.key)}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${activo ? 'bg-black' : 'bg-gray-200'}`}>
-                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${activo ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                            className={`relative inline-flex h-5 w-9 items-center transition-colors flex-shrink-0 ${activo ? 'bg-black' : 'bg-gray-200'}`}>
+                            <span className={`inline-block h-3.5 w-3.5 transform bg-white transition-transform ${activo ? 'translate-x-5' : 'translate-x-0.5'}`} />
                           </button>
                         </div>
                         {activo && (
@@ -525,8 +525,8 @@ export default function ProductFormPage() {
             </div>
             <button type="button"
               onClick={() => setForm((f) => ({ ...f, ofertaActiva: !f.ofertaActiva, precioOferta: '', ofertaHasta: '' }))}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.ofertaActiva ? 'bg-black' : 'bg-gray-300'}`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.ofertaActiva ? 'translate-x-6' : 'translate-x-1'}`} />
+              className={`relative inline-flex h-6 w-11 items-center transition-colors ${form.ofertaActiva ? 'bg-black' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform bg-white transition-transform ${form.ofertaActiva ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
 
@@ -589,7 +589,7 @@ export default function ProductFormPage() {
                         <div className="flex items-center gap-2">
                           <input type="color" value={v.color_hex}
                             onChange={(e) => setVariant(idx, 'color_hex', e.target.value)}
-                            className="w-10 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5" />
+                            className="w-10 h-9 border border-gray-200 cursor-pointer p-0.5" />
                           <span className="text-xs text-gray-400 font-mono">{v.color_hex}</span>
                         </div>
                       </td>
@@ -605,7 +605,7 @@ export default function ProductFormPage() {
                       </td>
                       <td className="px-3 py-2 text-center">
                         <button type="button" onClick={() => removeVariant(idx)}
-                          className="p-1 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
+                          className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
                           <Trash2 size={14} />
                         </button>
                       </td>
@@ -641,19 +641,19 @@ export default function ProductFormPage() {
                   {form.imagenes.map((img, idx) => (
                     <div key={idx} className="flex flex-col items-center gap-1.5">
                       <div className="relative group">
-                        <img src={img.url} alt="" className={`w-24 h-24 rounded-xl object-cover bg-gray-100 ${img._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
+                        <img src={img.url} alt="" className={`w-24 h-24 object-cover bg-gray-100 ${img._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
                         {idx === 0 && (
-                          <span className="absolute bottom-1 left-1 text-[10px] bg-black text-white px-1.5 py-0.5 rounded-md">
+                          <span className="absolute bottom-1 left-1 text-[10px] bg-black text-white px-1.5 py-0.5">
                             Principal
                           </span>
                         )}
                         {img._file && (
-                          <span className="absolute top-1 left-1 text-[9px] bg-yellow-400 text-black px-1 py-0.5 rounded-md font-semibold">
+                          <span className="absolute top-1 left-1 text-[9px] bg-yellow-400 text-black px-1 py-0.5 font-semibold">
                             Pendiente
                           </span>
                         )}
                         <button type="button" onClick={() => removeImage(idx)}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                           ×
                         </button>
                       </div>
@@ -667,7 +667,7 @@ export default function ProductFormPage() {
                               i === idx ? { ...im, varId: e.target.value ? Number(e.target.value) : null } : im
                             )
                           }))}
-                          className="text-[10px] border border-gray-200 rounded-lg px-1.5 py-1 w-24 bg-white"
+                          className="text-[10px] border border-gray-200 px-1.5 py-1 w-24 bg-white"
                         >
                           <option value="">Todos</option>
                           {colores.map((c) => (
@@ -683,7 +683,7 @@ export default function ProductFormPage() {
                   {form.imagenes.length < 5 && (
                     <div className="flex flex-col items-center">
                       <button type="button" onClick={() => imgInputRef.current?.click()}
-                        className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 hover:border-gray-400 hover:bg-gray-50 transition-all">
+                        className="w-24 h-24 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 hover:border-gray-400 hover:bg-gray-50 transition-all">
                         <Upload size={20} className="text-gray-400" />
                         <span className="text-[10px] text-gray-400">Agregar</span>
                       </button>
@@ -704,7 +704,7 @@ export default function ProductFormPage() {
 
             {form.video ? (
               <div className="flex items-start gap-4">
-                <video src={form.video.url} controls className={`w-48 h-28 rounded-xl object-cover bg-black ${form.video._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
+                <video src={form.video.url} controls className={`w-48 h-28 object-cover bg-black ${form.video._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
                 <div className="mt-1 space-y-1">
                   {form.video._file && (
                     <p className="text-[10px] text-yellow-600 font-semibold">Pendiente — se sube al guardar</p>
@@ -717,7 +717,7 @@ export default function ProductFormPage() {
               </div>
             ) : (
               <button type="button" onClick={() => vidInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all text-sm text-gray-500">
+                className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all text-sm text-gray-500">
                 <Video size={16} /> Subir video del producto
               </button>
             )}
@@ -734,8 +734,8 @@ export default function ProductFormPage() {
               <p className="text-xs text-gray-400">Solo los productos activos son visibles en la tienda</p>
             </div>
             <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
+              className={`relative inline-flex h-6 w-11 items-center transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
         </Section>

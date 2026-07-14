@@ -171,9 +171,9 @@ export default function CategoriesPage() {
                     {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   </button>
                   {cat.imagen_url ? (
-                    <img src={cat.imagen_url} alt={cat.nombre} className="w-10 h-10 rounded-lg object-cover bg-gray-100 flex-shrink-0" />
+                    <img src={cat.imagen_url} alt={cat.nombre} className="w-10 h-10 object-cover bg-gray-100 flex-shrink-0" />
                   ) : (
-                    <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    <div className="w-10 h-10 bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                       {cat.nombre.charAt(0)}
                     </div>
                   )}
@@ -184,8 +184,8 @@ export default function CategoriesPage() {
                   <span className="text-xs text-gray-500">{subs.length} subcats</span>
                   <Badge variant={cat.activo ? 'success' : 'danger'}>{cat.activo ? 'Activa' : 'Inactiva'}</Badge>
                   <div className="flex gap-1">
-                    <button onClick={() => openEdit(cat)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors"><Edit2 size={14} /></button>
-                    <button onClick={() => handleDelete(cat)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                    <button onClick={() => openEdit(cat)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors"><Edit2 size={14} /></button>
+                    <button onClick={() => handleDelete(cat)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
                   </div>
                 </div>
 
@@ -194,15 +194,15 @@ export default function CategoriesPage() {
                   <div className="bg-gray-50/60 border-t border-gray-100">
                     {subs.map((sub) => (
                       <div key={sub.id} className="flex items-center gap-4 pl-14 pr-5 py-2.5 hover:bg-gray-50 transition-colors">
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+                        <div className="w-1.5 h-1.5 bg-gray-300 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-black">{sub.nombre}</p>
                           <p className="text-xs text-gray-400 font-mono">{sub.slug}</p>
                         </div>
                         <Badge variant={sub.activo ? 'success' : 'danger'} className="text-xs">{sub.activo ? 'Activa' : 'Inactiva'}</Badge>
                         <div className="flex gap-1">
-                          <button onClick={() => openSubEdit(sub)} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors"><Edit2 size={12} /></button>
-                          <button onClick={() => handleSubDelete(sub)} className="p-1 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={12} /></button>
+                          <button onClick={() => openSubEdit(sub)} className="p-1 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors"><Edit2 size={12} /></button>
+                          <button onClick={() => handleSubDelete(sub)} className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={12} /></button>
                         </div>
                       </div>
                     ))}
@@ -228,7 +228,7 @@ export default function CategoriesPage() {
           <div>
             <label className="label-field">Imagen (opcional)</label>
             <div className="flex items-center gap-3">
-              <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex-shrink-0 flex items-center justify-center">
+              <div className="w-16 h-16 overflow-hidden bg-black flex-shrink-0 flex items-center justify-center">
                 {form.imagen_url ? (
                   <img src={form.imagen_url} alt="" className="w-full h-full object-cover opacity-70" />
                 ) : (
@@ -260,8 +260,8 @@ export default function CategoriesPage() {
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <span className="text-sm text-gray-600">Categoría activa</span>
             <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
+              className={`relative inline-flex h-6 w-11 items-center transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
           <div className="flex justify-end gap-3">
@@ -280,8 +280,8 @@ export default function CategoriesPage() {
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <span className="text-sm text-gray-600">Subcategoría activa</span>
             <button type="button" onClick={() => setSubForm((f) => ({ ...f, activo: !f.activo }))}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${subForm.activo ? 'bg-black' : 'bg-gray-300'}`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${subForm.activo ? 'translate-x-6' : 'translate-x-1'}`} />
+              className={`relative inline-flex h-6 w-11 items-center transition-colors ${subForm.activo ? 'bg-black' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform bg-white transition-transform ${subForm.activo ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
           <div className="flex justify-end gap-3">

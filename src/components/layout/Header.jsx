@@ -39,7 +39,7 @@ export default function Header({ onMenuClick }) {
       {/* Hamburger — solo mobile */}
       <button
         onClick={onMenuClick}
-        className="lg:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-black transition-colors flex-shrink-0"
+        className="lg:hidden p-2 hover:bg-gray-100 text-gray-500 hover:text-black transition-colors flex-shrink-0"
       >
         <Menu size={20} />
       </button>
@@ -69,14 +69,14 @@ export default function Header({ onMenuClick }) {
       {/* User + logout */}
       {user && (
         <div className="flex items-center gap-2 pl-2 border-l border-gray-100 flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          <div className="w-8 h-8 bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {user.nombre?.charAt(0)?.toUpperCase() ?? 'A'}
           </div>
           <span className="text-xs font-semibold text-black hidden lg:block">{user.nombre}</span>
           <button
             onClick={handleLogout}
             title="Cerrar sesión"
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors"
+            className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors"
           >
             <LogOut size={15} />
           </button>

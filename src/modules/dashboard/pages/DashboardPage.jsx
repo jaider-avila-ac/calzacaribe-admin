@@ -129,7 +129,7 @@ export default function DashboardPage() {
             <div className="divide-y divide-gray-50">
               {lowStock.map((v) => (
                 <div key={v.id} className="flex items-center gap-3 px-5 py-3.5">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${v.estado_stock === 'agotado' ? 'bg-red-600' : 'bg-yellow-400'}`} />
+                  <div className={`w-2 h-2 flex-shrink-0 ${v.estado_stock === 'agotado' ? 'bg-red-600' : 'bg-yellow-400'}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-black truncate">{v.producto_nombre ?? v.nombre}</p>
                     <p className="text-xs text-gray-400">{v.talla ?? ''}{v.color ? ` · ${v.color}` : ''}</p>

@@ -20,7 +20,7 @@ function Field({ label, value }) {
   return (
     <div>
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className="min-h-10 flex items-center rounded-lg border border-gray-100 bg-gray-50 px-3 text-sm font-semibold text-black">
+      <p className="min-h-10 flex items-center border border-gray-100 bg-gray-50 px-3 text-sm font-semibold text-black">
         {valueOrDash(value)}
       </p>
     </div>
@@ -69,7 +69,7 @@ export default function CustomerDetailPage() {
 
       <div className="section-card px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-violet-950 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+          <div className="w-11 h-11 bg-violet-950 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
             {customerName(customer).charAt(0)}
           </div>
           <div className="min-w-0">
@@ -96,14 +96,14 @@ export default function CustomerDetailPage() {
 
       <div className="section-card p-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+          <div className="flex items-center gap-3 border border-gray-100 bg-gray-50 px-4 py-3">
             <Mail size={16} className="text-gray-400" />
             <div>
               <p className="text-xs text-gray-400">Pedidos</p>
               <p className="text-sm font-black text-black">{customer?.total_pedidos ?? 0}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+          <div className="flex items-center gap-3 border border-gray-100 bg-gray-50 px-4 py-3">
             <IdCard size={16} className="text-gray-400" />
             <div>
               <p className="text-xs text-gray-400">Total gastado</p>
@@ -127,7 +127,7 @@ export default function CustomerDetailPage() {
         ) : (
           <div className="space-y-3">
             {direcciones.map((d, index) => (
-              <div key={d.id ?? index} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+              <div key={d.id ?? index} className="border border-gray-100 bg-gray-50 p-4">
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Dirección {index + 1}</p>

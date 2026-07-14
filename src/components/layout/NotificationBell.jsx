@@ -61,16 +61,16 @@ export default function NotificationBell() {
     <div className="relative flex-shrink-0" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors"
+        className="relative p-2 hover:bg-gray-50 transition-colors"
       >
         <Bell size={18} className="text-gray-600" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-600 rounded-full" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-600" />
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-2xl border border-gray-100 shadow-xl z-30">
+        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white border border-gray-100 shadow-xl z-30">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 sticky top-0 bg-white">
             <span className="text-sm font-black text-black">Notificaciones</span>
             {unreadCount > 0 && (
@@ -103,7 +103,7 @@ export default function NotificationBell() {
                   <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{n.mensaje}</p>
                   <span className="text-[10px] text-gray-400 mt-1 block">{tiempoRelativo(n.creado_en)}</span>
                 </div>
-                {!n.leida && <span className="w-2 h-2 rounded-full bg-black flex-shrink-0 mt-1.5" />}
+                {!n.leida && <span className="w-2 h-2 bg-black flex-shrink-0 mt-1.5" />}
               </button>
             )
           })}

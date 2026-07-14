@@ -133,7 +133,7 @@ export default function OrderDetailPage() {
     <div className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/pedidos')} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+        <button onClick={() => navigate('/pedidos')} className="p-2 hover:bg-gray-100 transition-colors">
           <ArrowLeft size={18} />
         </button>
         <div>
@@ -148,7 +148,7 @@ export default function OrderDetailPage() {
               value={order.estado}
               onChange={handleCambiarEstado}
               disabled={savingEstado}
-              className={`text-xs font-bold rounded-lg border-0 px-3 py-1.5 cursor-pointer disabled:opacity-60 ${BADGE_MAP[order.estado] === 'success' ? 'bg-green-100 text-green-700' : BADGE_MAP[order.estado] === 'danger' ? 'bg-red-100 text-red-600' : BADGE_MAP[order.estado] === 'info' ? 'bg-blue-100 text-blue-700' : 'bg-gray-800 text-white'}`}
+              className={`text-xs font-bold border-0 px-3 py-1.5 cursor-pointer disabled:opacity-60 ${BADGE_MAP[order.estado] === 'success' ? 'bg-green-100 text-green-700' : BADGE_MAP[order.estado] === 'danger' ? 'bg-red-100 text-red-600' : BADGE_MAP[order.estado] === 'info' ? 'bg-blue-100 text-blue-700' : 'bg-gray-800 text-white'}`}
             >
               {ESTADOS_PEDIDO.map((e) => (
                 <option key={e} value={e}>{ESTADO_LABEL[e]}</option>
@@ -274,7 +274,7 @@ export default function OrderDetailPage() {
       <div className="section-card p-5 space-y-3">
         <h2 className="text-sm font-bold text-black">Destinatario</h2>
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-violet-950 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+          <div className="w-10 h-10 bg-violet-950 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
             {order.cliente_nombre?.charAt(0)?.toUpperCase() ?? '?'}
           </div>
           <div className="space-y-1">
@@ -296,7 +296,7 @@ export default function OrderDetailPage() {
           </div>
         </div>
         {order.notas && (
-          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-500 bg-gray-50 px-3 py-2">
             <span className="font-semibold">Nota:</span> {order.notas}
           </p>
         )}
@@ -318,9 +318,9 @@ export default function OrderDetailPage() {
               <div key={item.id} className="flex items-center gap-4 px-5 py-4">
                 {item.imagen_snap ? (
                   <img src={item.imagen_snap} alt={item.nombre_snap}
-                    className="w-12 h-12 rounded-xl object-cover bg-gray-100 flex-shrink-0" />
+                    className="w-12 h-12 object-cover bg-gray-100 flex-shrink-0" />
                 ) : (
-                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-gray-100 flex items-center justify-center flex-shrink-0">
                     <Package size={18} className="text-gray-400" />
                   </div>
                 )}

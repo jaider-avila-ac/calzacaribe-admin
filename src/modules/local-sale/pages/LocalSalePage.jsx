@@ -148,7 +148,7 @@ export default function LocalSalePage() {
         {clienteModo === 'existente' ? (
           <div>
             {clienteSeleccionado ? (
-              <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
+              <div className="flex items-center justify-between bg-gray-50 px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold text-black">
                     {clienteSeleccionado.nombre} {clienteSeleccionado.apellido}
@@ -167,7 +167,7 @@ export default function LocalSalePage() {
                   onChange={(e) => setBuscarCliente(e.target.value)}
                 />
                 {clientesFiltrados.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 shadow-lg max-h-56 overflow-y-auto">
                     {clientesFiltrados.map((c) => (
                       <button
                         key={c.id}
@@ -211,7 +211,7 @@ export default function LocalSalePage() {
         </div>
 
         {productoSeleccionado ? (
-          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+          <div className="bg-gray-50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-black">{productoSeleccionado.nombre}</p>
               <button onClick={() => setProductoSeleccionado(null)} className="text-xs text-gray-400 hover:text-black">Cancelar</button>
@@ -241,7 +241,7 @@ export default function LocalSalePage() {
               onChange={(e) => setBuscarProducto(e.target.value)}
             />
             {resultadosProducto.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 shadow-lg max-h-56 overflow-y-auto">
                 {resultadosProducto.map((p) => (
                   <button key={p.id} onClick={() => seleccionarProducto(p)}
                     className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm border-b border-gray-50 last:border-0">
@@ -268,7 +268,7 @@ export default function LocalSalePage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-bold text-black">{fmt(priced?.subtotal)}</span>
-                  <button onClick={() => quitarItem(idx)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600">
+                  <button onClick={() => quitarItem(idx)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600">
                     <Trash2 size={14} />
                   </button>
                 </div>

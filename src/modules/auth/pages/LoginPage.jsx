@@ -31,13 +31,13 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/logos/isotipo-calzacaribe.svg" alt="Calzacaribe" className="h-14 w-14 mx-auto mb-4 rounded-2xl shadow-sm" />
+          <img src="/logos/isotipo-calzacaribe.svg" alt="Calzacaribe" className="h-14 w-14 mx-auto mb-4 shadow-sm" />
           <h1 className="text-xl font-black text-black">Calzacaribe Admin</h1>
           <p className="text-sm text-gray-400 mt-1">Ingresa tus credenciales para continuar</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg shadow-black/5 border border-gray-100 p-8">
+        <div className="bg-white shadow-lg shadow-black/5 border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="label-field">Correo electrónico</label>
@@ -79,7 +79,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+              <div className="flex items-start gap-2 bg-red-50 border border-red-100 px-4 py-3">
                 <AlertCircle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-600">{error}</p>
               </div>

@@ -115,11 +115,11 @@ export default function ProductsPage() {
                           <img
                             src={imagen}
                             alt={product.nombre}
-                            className="w-10 h-10 rounded-lg object-cover bg-gray-100 flex-shrink-0"
+                            className="w-10 h-10 object-cover bg-gray-100 flex-shrink-0"
                             onError={(e) => { e.target.style.display = 'none' }}
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0" />
+                          <div className="w-10 h-10 bg-gray-100 flex-shrink-0" />
                         )}
                         <div>
                           <p className="font-semibold text-black text-sm">{product.nombre}</p>
@@ -148,14 +148,14 @@ export default function ProductsPage() {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => navigate(`/productos/${product.id}/editar`)}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-black transition-colors"
+                          className="p-1.5 hover:bg-gray-100 text-gray-500 hover:text-black transition-colors"
                           title="Editar"
                         >
                           <Edit2 size={15} />
                         </button>
                         <button
                           onClick={() => handleDelete(product.id, product.nombre)}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
                           title="Eliminar"
                         >
                           <Trash2 size={15} />
@@ -179,7 +179,7 @@ export default function ProductsPage() {
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+              className="p-1.5 border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
             >
               <ChevronLeft size={14} />
             </button>
@@ -187,7 +187,7 @@ export default function ProductsPage() {
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page + 1 >= totalPages}
-              className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+              className="p-1.5 border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
             >
               <ChevronRight size={14} />
             </button>

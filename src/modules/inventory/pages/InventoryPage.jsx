@@ -165,14 +165,14 @@ export default function InventoryPage() {
                       >
                         <td className="table-cell pl-12 pr-5" />
                         <td className="table-cell px-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-gray-100 text-xs font-bold text-black">
+                          <span className="inline-flex items-center px-2.5 py-0.5 bg-gray-100 text-xs font-bold text-black">
                             {item.talla}
                           </span>
                         </td>
                         <td className="table-cell px-4">
                           <div className="flex items-center gap-2">
                             <span
-                              className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
+                              className="w-4 h-4 border border-gray-200 flex-shrink-0"
                               style={{ backgroundColor: item.color_hex }}
                             />
                             <span className="text-sm text-gray-600">{item.color}</span>
@@ -186,14 +186,14 @@ export default function InventoryPage() {
                                 type="number"
                                 value={editVal}
                                 onChange={(e) => setEditVal(e.target.value)}
-                                className="w-20 text-center border border-black rounded-lg px-2 py-1 text-sm font-bold focus:outline-none"
+                                className="w-20 text-center border border-black px-2 py-1 text-sm font-bold focus:outline-none"
                                 autoFocus
                                 min={0}
                               />
-                              <button onClick={() => confirmEdit(item)} className="p-1 rounded-lg bg-admin-accent text-admin-accent-contrast hover:bg-admin-accent-hover transition-colors">
+                              <button onClick={() => confirmEdit(item)} className="p-1 bg-admin-accent text-admin-accent-contrast hover:bg-admin-accent-hover transition-colors">
                                 <Check size={14} />
                               </button>
-                              <button onClick={cancelEdit} className="p-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                              <button onClick={cancelEdit} className="p-1 bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
                                 <X size={14} />
                               </button>
                             </div>
@@ -205,7 +205,7 @@ export default function InventoryPage() {
                               }`}>
                                 {item.stock}
                               </span>
-                              <button onClick={() => startEdit(item)} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
+                              <button onClick={() => startEdit(item)} className="p-1 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
                                 <Edit2 size={13} />
                               </button>
                             </div>
