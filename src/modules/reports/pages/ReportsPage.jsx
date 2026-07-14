@@ -4,7 +4,7 @@ import { reportService } from '../../../services/reportService'
 import { formatCurrency } from '../../../utils/format'
 
 const ESTADO_LABEL = {
-  pendiente_pago: 'Pago en proceso', pagado: 'Recibido', preparando: 'Preparando',
+  pendiente_pago: 'Pago en proceso', pagado: 'Pagado', preparando: 'Preparando',
   enviado: 'Enviado', entregado: 'Entregado', cancelado: 'Cancelado', devuelto: 'Devuelto',
 }
 const ESTADO_COLORS = {

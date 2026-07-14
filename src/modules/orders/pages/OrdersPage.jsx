@@ -20,7 +20,7 @@ const BADGE_MAP = {
 
 const ESTADO_LABEL = {
   pendiente_pago: 'Pago en proceso',
-  pagado:         'Recibido',
+  pagado:         'Pagado',
   preparando:     'Preparando',
   enviado:        'Enviado',
   entregado:      'Entregado',
