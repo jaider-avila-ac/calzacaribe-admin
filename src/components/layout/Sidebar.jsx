@@ -28,6 +28,7 @@ const NAV = [
     icon: ShoppingBag,
     items: [
       { label: 'Pedidos',      path: '/pedidos'      },
+      { label: 'Devoluciones', path: '/devoluciones' },
       { label: 'Venta local',  path: '/venta-local'  },
       { label: 'Clientes',    path: '/clientes'    },
     ],

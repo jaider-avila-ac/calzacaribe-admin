@@ -9,6 +9,7 @@ const PAGE_TITLES = {
   '/categorias':    { title: 'Categorías',    subtitle: 'Organiza tus líneas de producto' },
   '/inventario':    { title: 'Inventario',    subtitle: 'Control de stock y existencias'  },
   '/pedidos':       { title: 'Pedidos',       subtitle: 'Gestiona los pedidos de clientes'},
+  '/devoluciones':  { title: 'Devoluciones',  subtitle: 'Solicitudes de devolución de producto'},
   '/clientes':      { title: 'Clientes',      subtitle: 'Base de datos de compradores'   },
   '/promociones':   { title: 'Promociones',   subtitle: 'Cupones y descuentos activos'   },
   '/reportes':      { title: 'Reportes',      subtitle: 'Análisis y estadísticas de ventas'},

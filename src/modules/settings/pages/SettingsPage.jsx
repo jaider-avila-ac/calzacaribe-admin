@@ -1,8 +1,173 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Mail, Moon, Save, Store, Sun, Phone, MapPin } from 'lucide-react'
+import { CreditCard, Mail, Moon, Pencil, Plus, Save, Store, Sun, Phone, MapPin, Trash2, Undo2 } from 'lucide-react'
 import Input from '../../../components/ui/Input'
 import { getTheme, setTheme as saveTheme } from '../../../services/themeService'
 import { tiendaConfigService } from '../../../services/tiendaConfigService'
+import { direccionDevolucionService } from '../../../services/direccionDevolucionService'
+
+const DIRECCION_DEVOLUCION_VACIA = {
+  nombre: '', direccion: '', complemento: '', departamento: '', municipio: '', barrio: '',
+  contactoNombre: '', contactoTelefono: '',
+}
+
+function DireccionesDevolucionSection() {
+  const [direcciones, setDirecciones] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editando, setEditando] = useState(null) // id, o 'nueva'
+  const [form, setForm] = useState(DIRECCION_DEVOLUCION_VACIA)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    direccionDevolucionService.getAll()
+      .then((data) => setDirecciones(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(load, [])
+
+  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+
+  const iniciarEdicion = (dir) => {
+    setForm(dir ? {
+      nombre: dir.nombre, direccion: dir.direccion, complemento: dir.complemento ?? '',
+      departamento: dir.departamento, municipio: dir.municipio, barrio: dir.barrio ?? '',
+      contactoNombre: dir.contacto_nombre ?? '', contactoTelefono: dir.contacto_telefono ?? '',
+    } : DIRECCION_DEVOLUCION_VACIA)
+    setEditando(dir ? dir.id : 'nueva')
+    setError('')
+  }
+
+  const guardar = async () => {
+    if (!form.nombre.trim() || !form.direccion.trim() || !form.departamento.trim() || !form.municipio.trim()) {
+      setError('Nombre, dirección, departamento y municipio son obligatorios')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      if (editando === 'nueva') {
+        await direccionDevolucionService.create(form)
+      } else {
+        await direccionDevolucionService.update(editando, form)
+      }
+      setEditando(null)
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleActivo = async (dir) => {
+    try {
+      await direccionDevolucionService.update(dir.id, { activo: !dir.activo })
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar')
+    }
+  }
+
+  const eliminar = async (id) => {
+    if (!confirm('¿Eliminar esta dirección de devolución?')) return
+    try {
+      await direccionDevolucionService.remove(id)
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar')
+    }
+  }
+
+  return (
+    <div className="section-card p-6 space-y-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2">
+          <MapPin size={16} className="text-gray-500" />
+          <h2 className="text-sm font-bold text-black">Direcciones de devolución</h2>
+        </div>
+        {editando === null && (
+          <button type="button" onClick={() => iniciarEdicion(null)} className="btn-secondary text-xs">
+            <Plus size={13} /> Agregar
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 -mt-2">
+        A dónde le indicas al cliente que envíe un producto cuando apruebas su devolución. Puedes tener varias (ej. distintas sedes/bodegas).
+      </p>
+
+      {loading ? (
+        <p className="text-xs text-gray-400">Cargando...</p>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {direcciones.map((dir) => (
+            <div key={dir.id} className="py-3">
+              {editando === dir.id ? (
+                <DireccionDevolucionForm form={form} set={set} error={error} saving={saving}
+                  onGuardar={guardar} onCancelar={() => setEditando(null)} />
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className={dir.activo ? '' : 'opacity-50'}>
+                    <p className="text-sm font-semibold text-black">{dir.nombre}</p>
+                    <p className="text-xs text-gray-500">{dir.direccion}{dir.complemento ? `, ${dir.complemento}` : ''}</p>
+                    <p className="text-xs text-gray-400">{[dir.barrio, dir.municipio, dir.departamento].filter(Boolean).join(', ')}</p>
+                    {!dir.activo && <p className="text-xs text-red-500 mt-0.5">Inactiva</p>}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button type="button" onClick={() => toggleActivo(dir)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title={dir.activo ? 'Desactivar' : 'Activar'}>
+                      <Undo2 size={14} />
+                    </button>
+                    <button type="button" onClick={() => iniciarEdicion(dir)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title="Editar">
+                      <Pencil size={14} />
+                    </button>
+                    <button type="button" onClick={() => eliminar(dir.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Eliminar">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {editando === 'nueva' && (
+            <div className="py-3">
+              <DireccionDevolucionForm form={form} set={set} error={error} saving={saving}
+                onGuardar={guardar} onCancelar={() => setEditando(null)} />
+            </div>
+          )}
+          {direcciones.length === 0 && editando === null && (
+            <p className="text-xs text-gray-400 py-2">Aún no has agregado ninguna dirección de devolución.</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DireccionDevolucionForm({ form, set, error, saving, onGuardar, onCancelar }) {
+  return (
+    <div className="space-y-3 bg-gray-50 p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Nombre (ej. Bodega principal)" value={form.nombre} onChange={set('nombre')} />
+        <Input label="Dirección" value={form.direccion} onChange={set('direccion')} />
+        <Input label="Complemento (opcional)" value={form.complemento} onChange={set('complemento')} />
+        <Input label="Barrio (opcional)" value={form.barrio} onChange={set('barrio')} />
+        <Input label="Departamento" value={form.departamento} onChange={set('departamento')} />
+        <Input label="Municipio" value={form.municipio} onChange={set('municipio')} />
+        <Input label="Nombre de contacto (opcional)" value={form.contactoNombre} onChange={set('contactoNombre')} />
+        <Input label="Teléfono de contacto (opcional)" value={form.contactoTelefono} onChange={set('contactoTelefono')} />
+      </div>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={onGuardar} disabled={saving} className="btn-primary text-xs">
+          {saving ? 'Guardando...' : 'Guardar'}
+        </button>
+        <button type="button" onClick={onCancelar} className="text-xs text-gray-400 hover:text-black">Cancelar</button>
+      </div>
+    </div>
+  )
+}
 
 const INITIAL = {
   nombre: 'Calzacaribe',
@@ -144,6 +309,8 @@ export default function SettingsPage() {
             <Input label="Dirección" value={form.direccion} onChange={set('direccion')} />
           </div>
         </div>
+
+        <DireccionesDevolucionSection />
 
         {/* Envíos y pagos */}
         <div className="section-card p-6 space-y-4">
