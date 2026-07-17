@@ -130,18 +130,18 @@ function buildBasePayload(form) {
 }
 
 /** Sube a Cloudinary las imágenes/video pendientes (con _file) y arma la lista final. */
-async function uploadPendingMedia(form, isEdit, id) {
+async function uploadPendingMedia(form, productId) {
   const imagenesFinales = []
   for (const img of form.imagenes) {
     if (img._file) {
       const fd = new FormData()
       fd.append('file', img._file)
-      if (isEdit) fd.append('productId', id)
+      fd.append('productId', productId)
       const { url } = await api.upload('/upload/imagen', fd)
       URL.revokeObjectURL(img.url)
-      imagenesFinales.push({ url, orden: img.orden, tipo: 'imagen', var_id: img.varId ?? null })
+      imagenesFinales.push({ url, orden: img.orden, tipo: 'imagen', color: img.color ?? null })
     } else {
-      imagenesFinales.push({ url: img.url, orden: img.orden, tipo: img.tipo, var_id: img.varId ?? null })
+      imagenesFinales.push({ url: img.url, orden: img.orden, tipo: img.tipo, color: img.color ?? null })
     }
   }
 
@@ -151,7 +151,7 @@ async function uploadPendingMedia(form, isEdit, id) {
       const fd = new FormData()
       fd.append('file', form.video._file)
       fd.append('esVideo', 'true')
-      if (isEdit) fd.append('productId', id)
+      fd.append('productId', productId)
       const { url } = await api.upload('/upload/imagen', fd)
       URL.revokeObjectURL(form.video.url)
       videoUrl = url
@@ -165,7 +165,7 @@ async function uploadPendingMedia(form, isEdit, id) {
 
 function buildMediaPayload({ imagenesFinales, videoUrl }) {
   return [
-    ...imagenesFinales.map((i, idx) => ({ url: i.url, orden: i.orden ?? idx, tipo: 'imagen', var_id: i.var_id ?? null })),
+    ...imagenesFinales.map((i, idx) => ({ url: i.url, orden: i.orden ?? idx, tipo: 'imagen', color: i.color ?? null })),
     ...(videoUrl ? [{ url: videoUrl, orden: 99, tipo: 'video' }] : []),
   ]
 }
@@ -207,6 +207,7 @@ export default function ProductFormPage() {
   const [subcatOptions, setSubcatOptions] = useState([{ value: '', label: 'Sin subcategoría' }])
   const imgInputRef = useRef(null)
   const vidInputRef = useRef(null)
+  const [filtroColorFoto, setFiltroColorFoto] = useState(null)
 
   useEffect(() => {
     categoryService.getAll().then((data) => {
@@ -224,7 +225,7 @@ export default function ProductFormPage() {
       if (!p) return
       const imagenes = (p.imagenes ?? [])
         .filter((i) => i.tipo !== 'video')
-        .map((i) => ({ ...i, varId: i.var_id ?? null }))
+        .map((i) => ({ ...i, color: i.color ?? null }))
       const videoItem = (p.imagenes ?? []).find((i) => i.tipo === 'video')
       const loadedForm = {
         cat_id:  p.cat_id ?? '',
@@ -310,7 +311,7 @@ export default function ProductFormPage() {
       _file: file,
       orden: maxOrd + i + 1,
       tipo: 'imagen',
-      varId: null,
+      color: null,
     }))
     setForm((f) => ({ ...f, imagenes: [...f.imagenes, ...nuevas] }))
     if (imgInputRef.current) imgInputRef.current.value = ''
@@ -320,6 +321,12 @@ export default function ProductFormPage() {
     const img = form.imagenes[idx]
     if (img._file) URL.revokeObjectURL(img.url)
     setForm((f) => ({ ...f, imagenes: f.imagenes.filter((_, i) => i !== idx) }))
+    // Si esta era la última foto de su color, ese color deja de existir como opción de
+    // filtro (se recalcula solo, ver coloresConFotos) — si era el filtro activo, se limpia.
+    if (img.color && filtroColorFoto === img.color) {
+      const quedanOtras = form.imagenes.some((im, i) => i !== idx && im.color === img.color)
+      if (!quedanOtras) setFiltroColorFoto(null)
+    }
   }
 
   /* ── video ─────────────────────────────────────────── */
@@ -371,11 +378,11 @@ export default function ProductFormPage() {
         data.variantes = normalizeVariants(form.variantes)
       }
       if (withMedia) {
-        const { imagenesFinales, videoUrl } = await uploadPendingMedia(form, isEdit, id)
+        const { imagenesFinales, videoUrl } = await uploadPendingMedia(form, id)
         data.imagenes = buildMediaPayload({ imagenesFinales, videoUrl })
         setForm((f) => ({
           ...f,
-          imagenes: imagenesFinales.map((img) => ({ url: img.url, orden: img.orden, tipo: img.tipo, varId: img.var_id ?? null })),
+          imagenes: imagenesFinales.map((img) => ({ url: img.url, orden: img.orden, tipo: img.tipo, color: img.color ?? null })),
           video: videoUrl ? { url: videoUrl } : null,
         }))
       }
@@ -387,17 +394,25 @@ export default function ProductFormPage() {
     }
   }
 
-  /** Crea el producto completo (solo aplica cuando aún no existe, o sea !isEdit). */
+  /** Crea el producto completo (solo aplica cuando aún no existe, o sea !isEdit).
+   *  Primero crea el producto (sin medios) para tener un id real, y solo entonces sube las
+   *  imágenes/video con ese id — así Cloudinary guarda todo en "productos/{id}" desde el
+   *  principio, en vez de en una carpeta "productos/new" que nunca se corrige después. */
   const handleCreate = async () => {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     setSaving(true)
     try {
-      const { imagenesFinales, videoUrl } = await uploadPendingMedia(form, isEdit, id)
-      const data = buildBasePayload(form)
-      data.variantes = normalizeVariants(form.variantes)
-      data.imagenes = buildMediaPayload({ imagenesFinales, videoUrl })
-      await productService.create(data)
+      const base = buildBasePayload(form)
+      base.variantes = normalizeVariants(form.variantes)
+      const created = await productService.create(base)
+
+      const { imagenesFinales, videoUrl } = await uploadPendingMedia(form, created.id)
+      if (imagenesFinales.length > 0 || videoUrl) {
+        await productService.update(created.id, {
+          imagenes: buildMediaPayload({ imagenesFinales, videoUrl }),
+        })
+      }
       navigate('/productos')
     } catch (err) {
       alert('Error al guardar: ' + err.message)
@@ -629,16 +644,44 @@ export default function ProductFormPage() {
               Imágenes <span className="font-normal text-gray-400 normal-case">({form.imagenes.length}/5)</span>
             </p>
 
-            {/* Colores únicos de las variantes para asignar a imágenes */}
+            {/* Colores únicos de las variantes para asignar a imágenes — se identifican por el
+                nombre del color, no por el id de la variante: una variante recién agregada
+                todavía no tiene id (no existe en la BD hasta guardar), pero su color ya se conoce
+                de inmediato, así que la imagen sí se puede relacionar con él desde el principio. */}
             {(() => {
               const colores = form.variantes.reduce((acc, v) => {
                 if (v.color && !acc.find(c => c.color === v.color))
-                  acc.push({ id: v.id ?? null, color: v.color, hex: v.color_hex })
+                  acc.push({ color: v.color, hex: v.color_hex })
                 return acc
               }, [])
+              // Filtro de fotos por color — solo lista colores que TIENEN al menos una foto
+              // (se recalcula de las imágenes, no de las variantes): si se borra la última
+              // foto de un color, ese color deja de aparecer aquí automáticamente.
+              const coloresConFotos = form.imagenes.reduce((acc, img) => {
+                if (img.color && !acc.includes(img.color)) acc.push(img.color)
+                return acc
+              }, [])
+              const imagenesMostradas = form.imagenes
+                .map((img, idx) => ({ img, idx }))
+                .filter(({ img }) => !filtroColorFoto || img.color === filtroColorFoto)
               return (
+                <div>
+                  {coloresConFotos.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      <button type="button" onClick={() => setFiltroColorFoto(null)}
+                        className={`text-[10px] px-2 py-1 border transition-colors ${!filtroColorFoto ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-500 hover:border-gray-400'}`}>
+                        Todos
+                      </button>
+                      {coloresConFotos.map((c) => (
+                        <button key={c} type="button" onClick={() => setFiltroColorFoto(c)}
+                          className={`text-[10px] px-2 py-1 border transition-colors ${filtroColorFoto === c ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-500 hover:border-gray-400'}`}>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 <div className="flex flex-wrap gap-4">
-                  {form.imagenes.map((img, idx) => (
+                  {imagenesMostradas.map(({ img, idx }) => (
                     <div key={idx} className="flex flex-col items-center gap-1.5">
                       <div className="relative group">
                         <img src={img.url} alt="" className={`w-24 h-24 object-cover bg-gray-100 ${img._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
@@ -660,18 +703,18 @@ export default function ProductFormPage() {
                       {/* Dropdown de color para esta imagen */}
                       {colores.length > 0 && (
                         <select
-                          value={img.varId ?? ''}
+                          value={img.color ?? ''}
                           onChange={(e) => setForm((f) => ({
                             ...f,
                             imagenes: f.imagenes.map((im, i) =>
-                              i === idx ? { ...im, varId: e.target.value ? Number(e.target.value) : null } : im
+                              i === idx ? { ...im, color: e.target.value || null } : im
                             )
                           }))}
                           className="text-[10px] border border-gray-200 px-1.5 py-1 w-24 bg-white"
                         >
                           <option value="">Todos</option>
                           {colores.map((c) => (
-                            <option key={c.color} value={c.id ?? ''}>
+                            <option key={c.color} value={c.color}>
                               {c.color}
                             </option>
                           ))}
@@ -689,6 +732,7 @@ export default function ProductFormPage() {
                       </button>
                     </div>
                   )}
+                </div>
                 </div>
               )
             })()}
