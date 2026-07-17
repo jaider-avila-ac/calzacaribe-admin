@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, X, Check, Package } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Edit2, Trash2, X, Check, Package, Upload, ChevronUp, ChevronDown } from 'lucide-react'
 import { coleccionService } from '../../../services/coleccionService'
 import { productService } from '../../../services/productService'
+import { api } from '../../../services/api'
 import { slugify } from '../../../utils/format'
 import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
@@ -9,7 +10,7 @@ import Input from '../../../components/ui/Input'
 import EmptyState from '../../../components/ui/EmptyState'
 
 function emptyForm() {
-  return { nombre: '', slug: '', descripcion: '', orden: 0, activo: true, productoIds: [] }
+  return { nombre: '', slug: '', descripcion: '', activo: true, productoIds: [], imagen_url: '', _pendingFile: null }
 }
 
 export default function ColeccionesPage() {
@@ -21,6 +22,7 @@ export default function ColeccionesPage() {
   const [editId,      setEditId]      = useState(null)
   const [saving,      setSaving]      = useState(false)
   const [search,      setSearch]      = useState('')
+  const imgInputRef = useRef(null)
 
   useEffect(() => {
     Promise.all([coleccionService.getAll(), productService.getAll({ size: 500 })])
@@ -38,13 +40,26 @@ export default function ColeccionesPage() {
   const openEdit   = (c) => {
     setForm({
       nombre: c.nombre, slug: c.slug, descripcion: c.descripcion ?? '',
-      orden: c.orden, activo: c.activo, productoIds: c.producto_ids ?? [],
+      activo: c.activo, productoIds: c.producto_ids ?? [],
+      imagen_url: c.imagen_url ?? '', _pendingFile: null,
     })
     setEditId(c.id)
     setSearch('')
     setModal('edit')
   }
-  const closeModal = () => { setModal(null); setSearch('') }
+  const closeModal = () => {
+    if (form._pendingFile) URL.revokeObjectURL(form.imagen_url)
+    setModal(null)
+    setSearch('')
+  }
+
+  const handleImgFile = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (form._pendingFile) URL.revokeObjectURL(form.imagen_url)
+    setForm((f) => ({ ...f, imagen_url: URL.createObjectURL(file), _pendingFile: file }))
+    if (imgInputRef.current) imgInputRef.current.value = ''
+  }
 
   const set = (field) => (e) => setForm((f) => {
     const val = e.target.value
@@ -67,13 +82,21 @@ export default function ColeccionesPage() {
     if (!form.nombre.trim()) { alert('El nombre es obligatorio'); return }
     setSaving(true)
     try {
+      let imagenUrl = form.imagen_url || null
+      if (form._pendingFile) {
+        const fd = new FormData()
+        fd.append('file', form._pendingFile)
+        const { url } = await api.upload('/upload/coleccion', fd)
+        URL.revokeObjectURL(form.imagen_url)
+        imagenUrl = url
+      }
       const data = {
         nombre:      form.nombre.trim(),
         slug:        form.slug.trim(),
         descripcion: form.descripcion.trim() || null,
-        orden:       Number(form.orden) || 0,
         activo:      form.activo,
         producto_ids: form.productoIds,
+        imagen_url:  imagenUrl,
       }
       if (modal === 'create') await coleccionService.create(data)
       else await coleccionService.update(editId, data)
@@ -93,6 +116,19 @@ export default function ColeccionesPage() {
       await reload()
     } catch (err) {
       alert('Error al eliminar: ' + err.message)
+    }
+  }
+
+  const moveColeccion = async (index, dir) => {
+    const next = [...colecciones]
+    const target = index + dir
+    if (target < 0 || target >= next.length) return
+    ;[next[index], next[target]] = [next[target], next[index]]
+    try {
+      await coleccionService.reordenar(next.map((c) => c.id))
+      await reload()
+    } catch {
+      // la lista sigue viniendo de reload(), sin estado local que revertir
     }
   }
 
@@ -124,8 +160,19 @@ export default function ColeccionesPage() {
         />
       ) : (
         <div className="section-card divide-y divide-gray-50">
-          {colecciones.map((c) => (
+          {colecciones.map((c, index) => (
             <div key={c.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
+              {/* Reordenar */}
+              <div className="flex flex-col gap-0.5 flex-shrink-0">
+                <button onClick={() => moveColeccion(index, -1)} disabled={index === 0}
+                  className="p-0.5 text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+                  <ChevronUp size={14} />
+                </button>
+                <button onClick={() => moveColeccion(index, 1)} disabled={index === colecciones.length - 1}
+                  className="p-0.5 text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+                  <ChevronDown size={14} />
+                </button>
+              </div>
               {/* Imagen */}
               <div className="w-16 h-12 overflow-hidden bg-gray-100 flex-shrink-0">
                 {c.imagen_url ? (
@@ -139,7 +186,7 @@ export default function ColeccionesPage() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-black truncate">{c.nombre}</p>
-                <p className="text-xs text-gray-400">{(c.producto_ids ?? []).length} producto(s) · orden {c.orden}</p>
+                <p className="text-xs text-gray-400">{(c.producto_ids ?? []).length} producto(s)</p>
               </div>
               <Badge variant={c.activo ? 'success' : 'danger'}>{c.activo ? 'Activa' : 'Inactiva'}</Badge>
               <div className="flex gap-1">
@@ -172,15 +219,41 @@ export default function ColeccionesPage() {
               placeholder="Descripción breve de la colección…" className="input-field resize-none" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Orden" type="number" value={form.orden} onChange={set('orden')} placeholder="0" />
-            <div className="flex items-center justify-between pt-5">
-              <span className="text-sm text-gray-600">Activa</span>
-              <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
-                className={`relative inline-flex h-6 w-11 items-center transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
-                <span className={`inline-block h-4 w-4 transform bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Activa</span>
+            <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
+              className={`relative inline-flex h-6 w-11 items-center transition-colors ${form.activo ? 'bg-black' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform bg-white transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          {/* Imagen de portada/banner */}
+          <div>
+            <label className="label-field">Imagen de portada / banner (opcional)</label>
+            <div className="flex items-center gap-3">
+              <div className="w-24 h-14 overflow-hidden bg-black flex-shrink-0 flex items-center justify-center">
+                {form.imagen_url ? (
+                  <img src={form.imagen_url} alt="" className="w-full h-full object-cover opacity-70" />
+                ) : (
+                  <Package size={16} className="text-white/40" />
+                )}
+              </div>
+              <div className="flex-1">
+                <button type="button" onClick={() => imgInputRef.current?.click()} className="btn-secondary text-xs">
+                  <Upload size={13} /> {form.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
+                </button>
+                {form._pendingFile && (
+                  <p className="text-[10px] text-yellow-600 font-semibold mt-1">Pendiente — se sube al guardar</p>
+                )}
+                {form.imagen_url && !form._pendingFile && (
+                  <button type="button" onClick={() => setForm((f) => ({ ...f, imagen_url: '', _pendingFile: null }))}
+                    className="block text-[10px] text-red-500 hover:text-red-700 mt-1">
+                    Quitar imagen
+                  </button>
+                )}
+              </div>
             </div>
+            <input ref={imgInputRef} type="file" accept="image/*" hidden onChange={handleImgFile} />
           </div>
 
           {/* Selector de productos */}
@@ -215,9 +288,6 @@ export default function ColeccionesPage() {
                 })
               )}
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">
-              La imagen de la colección se toma automáticamente del primer producto seleccionado.
-            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
