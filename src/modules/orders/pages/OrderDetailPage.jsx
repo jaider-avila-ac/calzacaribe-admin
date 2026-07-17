@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle, Link2 } from 'lucide-react'
-import { orderService, ESTADOS_PEDIDO } from '../../../services/orderService'
+import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle, Link2, Ban, History } from 'lucide-react'
+import { orderService, ESTADOS_PEDIDO, MOTIVOS_CANCELACION } from '../../../services/orderService'
+import { reembolsoService } from '../../../services/reembolsoService'
 import Badge from '../../../components/ui/Badge'
+import Modal from '../../../components/ui/Modal'
 import { formatCurrency, formatDate } from '../../../utils/format'
+
+const REEMBOLSO_BADGE = { pendiente: 'warning', en_proceso: 'info', completado: 'success', rechazado: 'danger', error: 'danger' }
+const REEMBOLSO_LABEL = { pendiente: 'Pendiente', en_proceso: 'En proceso', completado: 'Completado', rechazado: 'Rechazado', error: 'Error' }
+const METODO_PAGO_LABEL = { CARD: 'Tarjeta', NEQUI: 'Nequi', PSE: 'PSE', BANCOLOMBIA_TRANSFER: 'Transferencia Bancolombia', EFECTIVO: 'Efectivo', OTRO: 'Otro' }
 
 const BADGE_MAP = {
   pendiente_pago: 'warning',
@@ -50,6 +56,17 @@ export default function OrderDetailPage() {
   const [savingEstado, setSavingEstado] = useState(false)
   const [estadoError, setEstadoError] = useState('')
 
+  const [historial, setHistorial] = useState([])
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelMotivo, setCancelMotivo] = useState('')
+  const [cancelMotivoOtro, setCancelMotivoOtro] = useState('')
+  const [cancelNota, setCancelNota] = useState('')
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelError, setCancelError] = useState('')
+  const [reembolsoNota, setReembolsoNota] = useState('')
+  const [reembolsoLoading, setReembolsoLoading] = useState(false)
+  const [reembolsoError, setReembolsoError] = useState('')
+
   const load = () => {
     setLoading(true)
     orderService.getById(id)
@@ -64,9 +81,52 @@ export default function OrderDetailPage() {
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
+    orderService.getHistorial(id).then(setHistorial).catch(() => setHistorial([]))
   }
 
   useEffect(load, [id])
+
+  const puedeCancelar = order && !['cancelado', 'devuelto', 'entregado'].includes(order.estado)
+
+  const abrirCancelar = () => {
+    setCancelMotivo('')
+    setCancelMotivoOtro('')
+    setCancelNota('')
+    setCancelError('')
+    setCancelOpen(true)
+  }
+
+  const handleCancelar = async () => {
+    if (!cancelMotivo) { setCancelError('Selecciona un motivo'); return }
+    if (cancelMotivo === 'otro' && !cancelMotivoOtro.trim()) {
+      setCancelError('Explica el motivo en el campo de abajo'); return
+    }
+    setCancelLoading(true)
+    setCancelError('')
+    try {
+      await orderService.cancelar(id, { motivo: cancelMotivo, motivoOtro: cancelMotivoOtro.trim() || null, nota: cancelNota.trim() || null })
+      setCancelOpen(false)
+      load()
+    } catch (err) {
+      setCancelError(err.message || 'No se pudo cancelar la compra')
+    } finally {
+      setCancelLoading(false)
+    }
+  }
+
+  const handleConfirmarReembolso = async (estado) => {
+    setReembolsoLoading(true)
+    setReembolsoError('')
+    try {
+      await reembolsoService.confirmar(order.reembolso.id, estado, reembolsoNota.trim() || null)
+      setReembolsoNota('')
+      load()
+    } catch (err) {
+      setReembolsoError(err.message || 'No se pudo confirmar el reembolso')
+    } finally {
+      setReembolsoLoading(false)
+    }
+  }
 
   const handleCambiarEstado = async (e) => {
     const nuevoEstado = e.target.value
@@ -156,8 +216,80 @@ export default function OrderDetailPage() {
             </select>
           )}
           {estadoError && <span className="text-[11px] text-red-500">{estadoError}</span>}
+          {puedeCancelar && (
+            <button onClick={abrirCancelar} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 mt-1">
+              <Ban size={12} /> Cancelar compra y reembolsar
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Cancelación por el admin — motivo, nota y estado del reembolso */}
+      {order.cancel_motivo && (
+        <div className="section-card p-4 border-l-4 border-red-500 bg-red-50 space-y-2">
+          <p className="text-sm font-bold text-red-700 flex items-center gap-1.5">
+            <Ban size={15} /> Compra cancelada por la tienda
+          </p>
+          <p className="text-xs text-red-600">
+            <span className="font-semibold">Motivo:</span> {MOTIVOS_CANCELACION.find((m) => m.value === order.cancel_motivo)?.label ?? order.cancel_motivo}
+            {order.cancel_motivo_otro && ` — ${order.cancel_motivo_otro}`}
+          </p>
+          {order.cancel_nota && (
+            <p className="text-xs text-red-600"><span className="font-semibold">Nota:</span> {order.cancel_nota}</p>
+          )}
+          <p className="text-xs text-red-500">Cancelada el {formatDate(order.cancelado_en)}</p>
+
+          {order.reembolso && (
+            <div className="pt-2 border-t border-red-200 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-red-700">Reembolso:</span>
+                <Badge variant={REEMBOLSO_BADGE[order.reembolso.estado]}>{REEMBOLSO_LABEL[order.reembolso.estado]}</Badge>
+                <span className="text-xs text-red-600">{formatCurrency(order.reembolso.monto_centavos / 100)}</span>
+                {order.metodo_pago && <span className="text-xs text-red-500">— {METODO_PAGO_LABEL[order.metodo_pago] ?? order.metodo_pago}</span>}
+              </div>
+              {order.reembolso.error_mensaje && (
+                <p className="text-xs text-red-500">{order.reembolso.error_mensaje}</p>
+              )}
+              {['pendiente', 'en_proceso'].includes(order.reembolso.estado) && (
+                <div className="space-y-1.5">
+                  <textarea value={reembolsoNota} onChange={(e) => setReembolsoNota(e.target.value)} rows={2}
+                    className="input-field bg-white resize-none text-xs" placeholder="Nota (ej. confirmado por transferencia Bancolombia el...)" />
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handleConfirmarReembolso('completado')} disabled={reembolsoLoading} className="btn-primary text-xs">
+                      {reembolsoLoading ? 'Guardando...' : 'Marcar reembolso completado'}
+                    </button>
+                    <button onClick={() => handleConfirmarReembolso('error')} disabled={reembolsoLoading} className="btn-danger text-xs">
+                      Marcar con error
+                    </button>
+                  </div>
+                  {reembolsoError && <p className="text-xs text-red-500">{reembolsoError}</p>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Historial de estados */}
+      {historial.length > 0 && (
+        <div className="section-card p-4">
+          <h2 className="text-sm font-bold text-black flex items-center gap-1.5 mb-2">
+            <History size={15} /> Historial
+          </h2>
+          <div className="space-y-1.5">
+            {historial.map((h, i) => (
+              <div key={i} className="flex items-center justify-between text-xs">
+                <span className="text-gray-600">
+                  <span className="font-semibold text-black">{ESTADO_LABEL[h.estado] ?? h.estado}</span>
+                  {h.admin && ` — ${h.admin}`}
+                  {h.nota && <span className="text-gray-400"> ({h.nota})</span>}
+                </span>
+                <span className="text-gray-400">{formatDate(h.fecha)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Alerta de stock insuficiente al confirmar el pago */}
       {order.alerta_stock && (
@@ -369,6 +501,51 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancelar compra y reembolsar" size="md">
+        <div className="space-y-3">
+          <div>
+            <label className="label-field">Motivo de la cancelación</label>
+            <select value={cancelMotivo} onChange={(e) => setCancelMotivo(e.target.value)} className="input-field bg-white">
+              <option value="">Selecciona un motivo...</option>
+              {MOTIVOS_CANCELACION.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
+
+          {cancelMotivo === 'otro' && (
+            <div>
+              <label className="label-field">Explica el motivo</label>
+              <textarea value={cancelMotivoOtro} onChange={(e) => setCancelMotivoOtro(e.target.value)} rows={2}
+                className="input-field bg-white resize-none" placeholder="Describe el motivo de la cancelación..." />
+            </div>
+          )}
+
+          <div>
+            <label className="label-field">Nota adicional para el cliente (opcional)</label>
+            <textarea value={cancelNota} onChange={(e) => setCancelNota(e.target.value)} rows={2}
+              className="input-field bg-white resize-none" placeholder="Información extra que verá el cliente..." />
+          </div>
+
+          <div className="bg-gray-50 p-3 space-y-1 text-xs text-gray-600">
+            <p><span className="font-semibold">Total a reembolsar:</span> {formatCurrency(order.total)}</p>
+            <p><span className="font-semibold">Método de pago:</span> {order.metodo_pago ? (METODO_PAGO_LABEL[order.metodo_pago] ?? order.metodo_pago) : 'Sin pago registrado'}</p>
+            {cancelMotivo && (
+              <p><span className="font-semibold">El cliente verá:</span> {MOTIVOS_CANCELACION.find((m) => m.value === cancelMotivo)?.label}{cancelMotivoOtro ? ` — ${cancelMotivoOtro}` : ''}{cancelNota ? `. ${cancelNota}` : ''}</p>
+            )}
+          </div>
+
+          <p className="text-xs text-red-500 font-medium flex items-center gap-1.5">
+            <AlertTriangle size={13} className="flex-shrink-0" />
+            Esta acción cancela la compra y no se puede deshacer fácilmente.
+          </p>
+
+          {cancelError && <p className="text-xs text-red-500">{cancelError}</p>}
+
+          <button onClick={handleCancelar} disabled={cancelLoading} className="btn-danger text-xs w-full justify-center">
+            {cancelLoading ? 'Procesando...' : 'Confirmar cancelación y reembolso'}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

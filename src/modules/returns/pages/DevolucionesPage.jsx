@@ -122,6 +122,7 @@ export default function DevolucionesPage() {
 
 function DetalleDevolucion({ solicitud, direcciones, onCambiado }) {
   const [direccionId, setDireccionId] = useState('')
+  const [notaAprobar, setNotaAprobar] = useState('')
   const [nota, setNota] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -131,7 +132,7 @@ function DetalleDevolucion({ solicitud, direcciones, onCambiado }) {
     setLoading(true)
     setError('')
     try {
-      await devolucionService.aprobar(solicitud.id, Number(direccionId))
+      await devolucionService.aprobar(solicitud.id, Number(direccionId), notaAprobar.trim() || null)
       onCambiado()
     } catch (err) {
       setError(err.message || 'No se pudo aprobar')
@@ -215,6 +216,11 @@ function DetalleDevolucion({ solicitud, direcciones, onCambiado }) {
               <option value="">Selecciona una dirección...</option>
               {direcciones.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="label-field">Nota para el cliente (opcional)</label>
+            <textarea value={notaAprobar} onChange={(e) => setNotaAprobar(e.target.value)} rows={2}
+              className="input-field bg-white resize-none" placeholder="Instrucciones adicionales para el envío..." />
           </div>
           <div className="flex items-center gap-2">
             <button onClick={handleAprobar} disabled={loading} className="btn-primary text-xs">

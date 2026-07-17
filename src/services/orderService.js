@@ -19,4 +19,17 @@ export const orderService = {
       link,
       mostrar,
     }),
+  cancelar: (id, { motivo, motivoOtro, nota }) =>
+    api.post(`${BASE}/${id}/cancelar`, { motivo, motivo_otro: motivoOtro, nota }),
+  getHistorial: (id) => api.get(`${BASE}/${id}/historial-estados`),
 }
+
+export const MOTIVOS_CANCELACION = [
+  { value: 'producto_agotado',      label: 'Producto agotado' },
+  { value: 'producto_inconveniente', label: 'Producto con inconvenientes' },
+  { value: 'error_precio',          label: 'Error en el precio o la publicación' },
+  { value: 'envio_imposible',       label: 'Imposibilidad de realizar el envío' },
+  { value: 'compra_duplicada',      label: 'Compra duplicada' },
+  { value: 'acordado_cliente',      label: 'Solicitud acordada con el cliente' },
+  { value: 'otro',                  label: 'Otro motivo' },
+]
