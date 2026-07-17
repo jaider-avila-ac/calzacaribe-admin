@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Edit2, Trash2, X, Check, ChevronDown, ChevronRight, Upload } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Check, ChevronDown, ChevronRight, ChevronUp, Upload } from 'lucide-react'
 import { useCategories } from '../hooks/useCategories'
+import { categoryService } from '../../../services/categoryService'
 import { subcategoryService } from '../../../services/subcategoryService'
 import { api } from '../../../services/api'
 import Badge from '../../../components/ui/Badge'
@@ -21,7 +22,7 @@ function slugify(text) {
 }
 
 export default function CategoriesPage() {
-  const { categories, loading, error, create, update, remove } = useCategories()
+  const { categories, loading, error, reload, create, update, remove } = useCategories()
   const [modal, setModal]       = useState(null)
   const [form, setForm]         = useState(emptycat())
   const [expanded, setExpanded] = useState({})
@@ -139,6 +140,33 @@ export default function CategoriesPage() {
     await reloadSubcats(sub.cat_id)
   }
 
+  const moveCategory = async (index, dir) => {
+    const next = [...categories]
+    const target = index + dir
+    if (target < 0 || target >= next.length) return
+    ;[next[index], next[target]] = [next[target], next[index]]
+    try {
+      await categoryService.reordenar(next.map((c) => c.id))
+      reload()
+    } catch {
+      // sin cambio local que revertir — la lista sigue viniendo de useCategories()
+    }
+  }
+
+  const moveSubcategory = async (catId, index, dir) => {
+    const list = subcats[catId] ?? []
+    const next = [...list]
+    const target = index + dir
+    if (target < 0 || target >= next.length) return
+    ;[next[index], next[target]] = [next[target], next[index]]
+    setSubcats((prev) => ({ ...prev, [catId]: next }))
+    try {
+      await subcategoryService.reordenar(next.map((s) => s.id))
+    } catch {
+      await reloadSubcats(catId)
+    }
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Cargando categorías…</div>
   )
@@ -160,13 +188,23 @@ export default function CategoriesPage() {
         </div>
       ) : (
         <div className="section-card divide-y divide-gray-50">
-          {categories.map((cat) => {
+          {categories.map((cat, catIndex) => {
             const subs   = subcats[cat.id] ?? []
             const isOpen = !!expanded[cat.id]
             return (
               <div key={cat.id}>
                 {/* Fila categoría */}
                 <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex flex-col gap-0.5 flex-shrink-0">
+                    <button onClick={() => moveCategory(catIndex, -1)} disabled={catIndex === 0}
+                      className="p-0.5 text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+                      <ChevronUp size={14} />
+                    </button>
+                    <button onClick={() => moveCategory(catIndex, 1)} disabled={catIndex === categories.length - 1}
+                      className="p-0.5 text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
                   <button onClick={() => toggleExpand(cat.id)} className="p-1 text-gray-400 hover:text-black transition-colors">
                     {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   </button>
@@ -192,8 +230,18 @@ export default function CategoriesPage() {
                 {/* Subcategorías */}
                 {isOpen && (
                   <div className="bg-gray-50/60 border-t border-gray-100">
-                    {subs.map((sub) => (
+                    {subs.map((sub, subIndex) => (
                       <div key={sub.id} className="flex items-center gap-4 pl-14 pr-5 py-2.5 hover:bg-gray-50 transition-colors">
+                        <div className="flex flex-col gap-0.5 flex-shrink-0">
+                          <button onClick={() => moveSubcategory(cat.id, subIndex, -1)} disabled={subIndex === 0}
+                            className="p-0.5 text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+                            <ChevronUp size={12} />
+                          </button>
+                          <button onClick={() => moveSubcategory(cat.id, subIndex, 1)} disabled={subIndex === subs.length - 1}
+                            className="p-0.5 text-gray-300 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+                            <ChevronDown size={12} />
+                          </button>
+                        </div>
                         <div className="w-1.5 h-1.5 bg-gray-300 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-black">{sub.nombre}</p>
@@ -224,39 +272,41 @@ export default function CategoriesPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Nombre" value={form.nombre} onChange={set('nombre')} placeholder="Ej: Hombre" required />
           <Input label="Slug (URL)" value={form.slug} onChange={set('slug')} placeholder="hombre" required />
-          {/* Imagen de categoría */}
-          <div>
-            <label className="label-field">Imagen (opcional)</label>
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 overflow-hidden bg-black flex-shrink-0 flex items-center justify-center">
-                {form.imagen_url ? (
-                  <img src={form.imagen_url} alt="" className="w-full h-full object-cover opacity-70" />
-                ) : (
-                  <span className="text-white text-xs font-bold">{form.nombre?.charAt(0) || '?'}</span>
-                )}
-              </div>
-              <div className="flex-1">
-                <button type="button" onClick={() => imgInputRef.current?.click()}
-                  className="btn-secondary text-xs">
-                  <Upload size={13} /> {form.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
-                </button>
-                {form._pendingFile && (
-                  <p className="text-[10px] text-yellow-600 font-semibold mt-1">Pendiente — se sube al guardar</p>
-                )}
-                {form.imagen_url && !form._pendingFile && (
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, imagen_url: '', _pendingFile: null }))}
-                    className="block text-[10px] text-red-500 hover:text-red-700 mt-1">
-                    Quitar imagen
+          {/* Imagen de categoría — solo al editar: recién creada la categoría aún no tiene
+              id real, así que la imagen se agrega después desde "Editar". */}
+          {modal === 'edit' && (
+            <div>
+              <label className="label-field">Imagen (opcional)</label>
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 overflow-hidden bg-black flex-shrink-0 flex items-center justify-center">
+                  {form.imagen_url ? (
+                    <img src={form.imagen_url} alt="" className="w-full h-full object-cover opacity-70" />
+                  ) : (
+                    <span className="text-white text-xs font-bold">{form.nombre?.charAt(0) || '?'}</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <button type="button" onClick={() => imgInputRef.current?.click()}
+                    className="btn-secondary text-xs">
+                    <Upload size={13} /> {form.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
                   </button>
-                )}
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Si no hay imagen se usará la del primer producto de esta categoría.
-                </p>
+                  {form._pendingFile && (
+                    <p className="text-[10px] text-yellow-600 font-semibold mt-1">Pendiente — se sube al guardar</p>
+                  )}
+                  {form.imagen_url && !form._pendingFile && (
+                    <button type="button" onClick={() => setForm((f) => ({ ...f, imagen_url: '', _pendingFile: null }))}
+                      className="block text-[10px] text-red-500 hover:text-red-700 mt-1">
+                      Quitar imagen
+                    </button>
+                  )}
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Si no hay imagen se usará la del primer producto de esta categoría.
+                  </p>
+                </div>
               </div>
+              <input ref={imgInputRef} type="file" accept="image/*" hidden onChange={handleImgFile} />
             </div>
-            <input ref={imgInputRef} type="file" accept="image/*" hidden onChange={handleImgFile} />
-          </div>
-          <Input label="Orden" type="number" value={form.orden} onChange={set('orden')} placeholder="0" />
+          )}
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <span className="text-sm text-gray-600">Categoría activa</span>
             <button type="button" onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
@@ -276,7 +326,6 @@ export default function CategoriesPage() {
         <form onSubmit={handleSubSubmit} className="space-y-4">
           <Input label="Nombre" value={subForm.nombre ?? ''} onChange={setSub('nombre')} placeholder="Ej: Tenis" required />
           <Input label="Slug" value={subForm.slug ?? ''} onChange={setSub('slug')} placeholder="tenis" required />
-          <Input label="Orden" type="number" value={subForm.orden ?? 0} onChange={setSub('orden')} />
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <span className="text-sm text-gray-600">Subcategoría activa</span>
             <button type="button" onClick={() => setSubForm((f) => ({ ...f, activo: !f.activo }))}

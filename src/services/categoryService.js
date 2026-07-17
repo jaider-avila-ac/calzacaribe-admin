@@ -8,4 +8,5 @@ export const categoryService = {
   create:   (data)    => api.post(BASE, data),
   update:   (id, data)=> api.put(`${BASE}/${id}`, data),
   remove:   (id)      => api.delete(`${BASE}/${id}`),
+  reordenar: (ids)    => api.patch(`${BASE}/reordenar`, ids),
 }
