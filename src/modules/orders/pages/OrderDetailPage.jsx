@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle, Link2, Ban, History } from 'lucide-react'
+import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle, Link2, Ban, History, UserPlus, UserCog } from 'lucide-react'
 import { orderService, ESTADOS_PEDIDO, MOTIVOS_CANCELACION } from '../../../services/orderService'
 import { reembolsoService } from '../../../services/reembolsoService'
+import { authService } from '../../../services/authService'
 import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -67,6 +68,13 @@ export default function OrderDetailPage() {
   const [reembolsoLoading, setReembolsoLoading] = useState(false)
   const [reembolsoError, setReembolsoError] = useState('')
 
+  const [colaboradores, setColaboradores] = useState([])
+  const [tomando, setTomando] = useState(false)
+  const [asignError, setAsignError] = useState('')
+
+  const user = authService.getUser()
+  const isAdmin = user?.rol === 'admin' || user?.rol === 'superadmin'
+
   const load = () => {
     setLoading(true)
     orderService.getById(id)
@@ -86,7 +94,13 @@ export default function OrderDetailPage() {
 
   useEffect(load, [id])
 
-  const puedeCancelar = order && !['cancelado', 'devuelto', 'entregado'].includes(order.estado)
+  useEffect(() => {
+    if (isAdmin) {
+      orderService.getColaboradores().then((d) => setColaboradores(Array.isArray(d) ? d : [])).catch(() => {})
+    }
+  }, [isAdmin])
+
+  const puedeCancelar = isAdmin && order && !['cancelado', 'devuelto', 'entregado'].includes(order.estado)
 
   const abrirCancelar = () => {
     setCancelMotivo('')
@@ -140,6 +154,34 @@ export default function OrderDetailPage() {
       setEstadoError(err.message || 'No se pudo cambiar el estado')
     } finally {
       setSavingEstado(false)
+    }
+  }
+
+  const handleTomar = async () => {
+    setTomando(true)
+    setAsignError('')
+    try {
+      await orderService.asignarme(id)
+      load()
+    } catch (err) {
+      setAsignError(err.message || 'No se pudo tomar el pedido')
+    } finally {
+      setTomando(false)
+    }
+  }
+
+  const handleAsignar = async (e) => {
+    const value = e.target.value
+    const colaboradorId = value === '' ? null : Number(value)
+    setTomando(true)
+    setAsignError('')
+    try {
+      await orderService.asignar(id, colaboradorId)
+      load()
+    } catch (err) {
+      setAsignError(err.message || 'No se pudo reasignar el pedido')
+    } finally {
+      setTomando(false)
     }
   }
 
@@ -224,6 +266,30 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
+      {/* Responsable del pedido — cualquier staff puede tomarlo; admin puede reasignar/desasignar */}
+      <div className="section-card p-4 flex items-center gap-3">
+        <UserCog size={16} className="text-gray-400 flex-shrink-0" />
+        <span className="text-xs font-semibold text-gray-500 flex-shrink-0">Responsable:</span>
+        {isAdmin ? (
+          <select
+            value={order.colaborador_id ?? ''}
+            onChange={handleAsignar}
+            disabled={tomando}
+            className="input-field bg-white text-xs py-1.5 w-auto disabled:opacity-60"
+          >
+            <option value="">Sin asignar</option>
+            {colaboradores.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+        ) : order.colaborador_nombre ? (
+          <span className="text-xs font-semibold text-black">{order.colaborador_nombre}</span>
+        ) : (
+          <button onClick={handleTomar} disabled={tomando} className="flex items-center gap-1 text-xs text-admin-accent hover:underline disabled:opacity-50">
+            <UserPlus size={13} /> {tomando ? 'Tomando...' : 'Hacerme responsable'}
+          </button>
+        )}
+        {asignError && <span className="text-[11px] text-red-500">{asignError}</span>}
+      </div>
+
       {/* Cancelación por el admin — motivo, nota y estado del reembolso */}
       {order.cancel_motivo && (
         <div className="section-card p-4 border-l-4 border-red-500 bg-red-50 space-y-2">
@@ -250,7 +316,7 @@ export default function OrderDetailPage() {
               {order.reembolso.error_mensaje && (
                 <p className="text-xs text-red-500">{order.reembolso.error_mensaje}</p>
               )}
-              {['pendiente', 'en_proceso'].includes(order.reembolso.estado) && (
+              {isAdmin && ['pendiente', 'en_proceso'].includes(order.reembolso.estado) && (
                 <div className="space-y-1.5">
                   <textarea value={reembolsoNota} onChange={(e) => setReembolsoNota(e.target.value)} rows={2}
                     className="input-field bg-white resize-none text-xs" placeholder="Nota (ej. confirmado por transferencia Bancolombia el...)" />

@@ -36,7 +36,7 @@ const NAV = [
   {
     group: 'Análisis',
     icon: BarChart2,
-    items: [{ label: 'Reportes', path: '/reportes' }],
+    items: [{ label: 'Reportes', path: '/reportes', roles: ['admin', 'superadmin'] }],
   },
   {
     group: 'Sistema',
@@ -102,6 +102,8 @@ export default function Sidebar({ open, onClose }) {
           [&::-webkit-scrollbar-thumb]:bg-white/10">
 
           {NAV.map((section) => {
+            if (visibleItems(section).length === 0) return null
+
             const Icon    = section.icon
             const isOpen  = expanded[section.group]
             const hasActive = isGroupActive(section)

@@ -1,13 +1,13 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Eye, Search, AlertTriangle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Eye, Search, AlertTriangle, UserPlus } from 'lucide-react'
 import { useOrders } from '../hooks/useOrders'
-import { ESTADOS_PEDIDO } from '../../../services/orderService'
+import { orderService, ESTADOS_FILTRO_PEDIDOS } from '../../../services/orderService'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
 import { formatCurrency, formatDate } from '../../../utils/format'
 
-const ESTADOS = ESTADOS_PEDIDO
+const ESTADOS = ESTADOS_FILTRO_PEDIDOS
 const BADGE_MAP = {
   pendiente_pago: 'warning',
   pagado:         'info',
@@ -30,9 +30,29 @@ const ESTADO_LABEL = {
 
 export default function OrdersPage() {
   const navigate = useNavigate()
-  const { orders, counts, loading } = useOrders()
+  const [searchParams] = useSearchParams()
+  const { orders, counts, loading, reload } = useOrders()
   const [search, setSearch] = useState('')
-  const [filterEstado, setFilterEstado] = useState('')
+  const [filterEstado, setFilterEstado] = useState(() => searchParams.get('estado') ?? '')
+  const [filterColaborador, setFilterColaborador] = useState('')
+  const [colaboradores, setColaboradores] = useState([])
+  const [tomando, setTomando] = useState(null)
+
+  useEffect(() => {
+    orderService.getColaboradores().then((d) => setColaboradores(Array.isArray(d) ? d : [])).catch(() => {})
+  }, [])
+
+  const handleTomar = async (id) => {
+    setTomando(id)
+    try {
+      await orderService.asignarme(id)
+      await reload()
+    } catch (err) {
+      alert(err.message || 'No se pudo tomar el pedido')
+    } finally {
+      setTomando(null)
+    }
+  }
 
   const filtered = orders.filter((o) => {
     const q = search.toLowerCase()
@@ -42,7 +62,8 @@ export default function OrdersPage() {
       o.cliente_nombre?.toLowerCase().includes(q) ||
       o.cliente_email?.toLowerCase().includes(q)
     const matchEstado = filterEstado ? o.estado === filterEstado : true
-    return matchSearch && matchEstado
+    const matchColaborador = filterColaborador ? String(o.colaborador_id) === filterColaborador : true
+    return matchSearch && matchEstado && matchColaborador
   })
 
   return (
@@ -54,6 +75,12 @@ export default function OrdersPage() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input placeholder="Buscar por #pedido o cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 input-field text-sm" />
           </div>
+          <select value={filterColaborador} onChange={(e) => setFilterColaborador(e.target.value)}
+            className="input-field bg-white text-sm w-48">
+            <option value="">Todos los responsables</option>
+            <option value="null">Sin asignar</option>
+            {colaboradores.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
           <div className="flex gap-1.5 flex-wrap">
             <button onClick={() => setFilterEstado('')} className={`px-3 py-1.5 text-xs font-medium transition-all ${filterEstado === '' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               Todos ({counts.total ?? 0})
@@ -83,6 +110,7 @@ export default function OrdersPage() {
                 <th className="table-header px-4 py-3 text-left">Método pago</th>
                 <th className="table-header px-4 py-3 text-right">Total</th>
                 <th className="table-header px-4 py-3 text-center">Estado</th>
+                <th className="table-header px-4 py-3 text-left">Responsable</th>
                 <th className="table-header px-4 py-3 text-center">Acciones</th>
               </tr>
             </thead>
@@ -100,7 +128,7 @@ export default function OrdersPage() {
                   <td className="table-cell px-4">
                     <div>
                       <p className="font-semibold text-black text-sm">{order.cliente_nombre}</p>
-                      <p className="text-xs text-gray-400 truncate max-w-xs">{order.dir_snapshot?.ciudad}</p>
+                      <p className="text-xs text-gray-400 truncate max-w-xs">{order.dir_snapshot?.municipio}</p>
                     </div>
                   </td>
                   <td className="table-cell px-4 text-gray-500">{formatDate(order.creado_en)}</td>
@@ -108,6 +136,16 @@ export default function OrdersPage() {
                   <td className="table-cell px-4 text-right font-bold text-black">{formatCurrency(order.total)}</td>
                   <td className="table-cell px-4 text-center">
                     <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>
+                  </td>
+                  <td className="table-cell px-4">
+                    {order.colaborador_nombre ? (
+                      <span className="text-xs font-semibold text-black">{order.colaborador_nombre}</span>
+                    ) : (
+                      <button onClick={() => handleTomar(order.id)} disabled={tomando === order.id}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-black transition-colors disabled:opacity-50">
+                        <UserPlus size={13} /> {tomando === order.id ? 'Tomando...' : 'Tomar pedido'}
+                      </button>
+                    )}
                   </td>
                   <td className="table-cell px-4 text-center">
                     <button onClick={() => navigate(`/pedidos/${order.id}`)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Ver detalle">

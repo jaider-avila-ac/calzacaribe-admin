@@ -19,14 +19,14 @@ const ROL_BADGE = { colaborador: 'info', bodega: 'warning', admin: 'dark' }
 function emptyForm() {
   return {
     nombre: '', usuario: '', password: '', rol: 'colaborador',
-    apellido: '', telefono: '', cargo: '', tipoDocumento: 'CC', numeroDocumento: '', fechaNacimiento: '',
+    apellido: '', telefono: '', tipoDocumento: 'CC', numeroDocumento: '', fechaNacimiento: '',
   }
 }
 
 function formFromItem(item) {
   return {
     nombre: item.nombre ?? '', usuario: '', password: '', rol: item.rol,
-    apellido: item.apellido ?? '', telefono: item.telefono ?? '', cargo: item.cargo ?? '',
+    apellido: item.apellido ?? '', telefono: item.telefono ?? '',
     tipoDocumento: item.tipo_documento ?? 'CC', numeroDocumento: item.numero_documento ?? '',
     fechaNacimiento: item.fecha_nacimiento ?? '',
   }
@@ -136,7 +136,6 @@ export default function CollaboratorsPage() {
                 <tr>
                   <th className="table-header px-5 py-3 text-left">Nombre</th>
                   <th className="table-header px-4 py-3 text-left">Usuario</th>
-                  <th className="table-header px-4 py-3 text-left">Cargo</th>
                   <th className="table-header px-4 py-3 text-center">Rol</th>
                   <th className="table-header px-4 py-3 text-center">Estado</th>
                   <th className="table-header px-4 py-3 text-center">Acciones</th>
@@ -159,7 +158,6 @@ export default function CollaboratorsPage() {
                       </div>
                     </td>
                     <td className="table-cell px-4 text-gray-500">{c.email}</td>
-                    <td className="table-cell px-4 text-gray-500">{c.cargo || '—'}</td>
                     <td className="table-cell px-4 text-center">
                       <Badge variant={ROL_BADGE[c.rol] ?? 'default'}>{c.rol}</Badge>
                     </td>
@@ -223,10 +221,7 @@ export default function CollaboratorsPage() {
             </>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Teléfono" value={form.telefono} onChange={set('telefono')} />
-            <Input label="Cargo" value={form.cargo} onChange={set('cargo')} placeholder="ej: Vendedor" />
-          </div>
+          <Input label="Teléfono" value={form.telefono} onChange={set('telefono')} />
 
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -1,10 +1,11 @@
+import { Link } from 'react-router-dom'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
-export default function StatCard({ title, value, subtitle, icon: Icon, trend, trendLabel }) {
+export default function StatCard({ title, value, subtitle, icon: Icon, trend, trendLabel, to }) {
   const isPositive = trend >= 0
 
-  return (
-    <div className="stat-card">
+  const content = (
+    <>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
@@ -26,6 +27,16 @@ export default function StatCard({ title, value, subtitle, icon: Icon, trend, tr
           {trendLabel && <span className="text-xs text-gray-400">{trendLabel}</span>}
         </div>
       )}
-    </div>
+    </>
   )
+
+  if (to) {
+    return (
+      <Link to={to} className="stat-card block transition-shadow hover:shadow-md">
+        {content}
+      </Link>
+    )
+  }
+
+  return <div className="stat-card">{content}</div>
 }

@@ -31,19 +31,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const mes = currentMonth()
-    Promise.all([
+    // allSettled: cada tarjeta se llena de forma independiente — si alguna petición falla
+    // (ej. un colaborador con acceso restringido a algo puntual), el resto del dashboard
+    // igual debe cargar en vez de quedar todo vacío.
+    Promise.allSettled([
       reportService.resumen(mes),
       orderService.getAll(),
       reportService.pedidosPorEstado(mes),
       api.get('/variantes/low-stock?limite=10'),
     ])
       .then(([res, orders, estados, stock]) => {
-        setResumen(res)
-        setRecentOrders((Array.isArray(orders) ? orders : []).slice(0, 6))
-        setByEstado(Array.isArray(estados) ? estados : [])
-        setLowStock(Array.isArray(stock) ? stock : [])
+        if (res.status === 'fulfilled') setResumen(res.value)
+        if (orders.status === 'fulfilled') setRecentOrders((Array.isArray(orders.value) ? orders.value : []).slice(0, 6))
+        if (estados.status === 'fulfilled') setByEstado(Array.isArray(estados.value) ? estados.value : [])
+        if (stock.status === 'fulfilled') setLowStock(Array.isArray(stock.value) ? stock.value : [])
       })
-      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
@@ -56,30 +58,36 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Ingresos del mes"
-          value={formatCurrency(resumen?.total_ingresos ?? 0)}
-          subtitle="Pedidos entregados"
-          icon={DollarSign}
-        />
+      <div className={`grid grid-cols-2 gap-4 ${resumen?.total_ingresos != null ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        {resumen?.total_ingresos != null && (
+          <StatCard
+            title="Ingresos del mes"
+            value={formatCurrency(resumen.total_ingresos)}
+            subtitle="Pedidos entregados"
+            icon={DollarSign}
+            to="/reportes"
+          />
+        )}
         <StatCard
           title="Pedidos del mes"
           value={resumen?.total_pedidos ?? 0}
           subtitle={`${pendingCount} en proceso`}
           icon={ShoppingBag}
+          to="/pedidos"
         />
         <StatCard
           title="Clientes nuevos"
           value={resumen?.total_clientes ?? 0}
           subtitle="Registrados este mes"
           icon={Users}
+          to="/clientes"
         />
         <StatCard
           title="Productos"
           value={resumen?.total_productos ?? 0}
           subtitle={`${resumen?.productos_activos ?? 0} activos`}
           icon={Package}
+          to="/productos"
         />
       </div>
 
@@ -156,11 +164,13 @@ export default function DashboardPage() {
           {['pagado', 'preparando', 'enviado', 'entregado'].map((estado) => {
             const found = byEstado.find((e) => e.estado === estado)
             return (
-              <div key={estado} className="px-5 py-4 text-center">
+              <Link key={estado} to={`/pedidos?estado=${estado}`} className="px-5 py-4 text-center block hover:bg-gray-50 transition-colors">
                 <Badge variant={BADGE_MAP[estado]}>{ESTADO_LABEL[estado]}</Badge>
                 <p className="text-2xl font-black text-black mt-2">{found?.cantidad ?? 0}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{formatCurrency(found?.total ?? 0)}</p>
-              </div>
+                {found?.total != null && (
+                  <p className="text-xs text-gray-400 mt-0.5">{formatCurrency(found.total)}</p>
+                )}
+              </Link>
             )
           })}
         </div>
