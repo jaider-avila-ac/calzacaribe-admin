@@ -102,6 +102,7 @@ export default function LocalSalePage() {
   const handleSubmit = async () => {
     setError('')
     if (items.length === 0) { setError('Agrega al menos un producto'); return }
+    if (!quote.total || quote.total <= 0) { setError('El total de la venta debe ser mayor a $0'); return }
     if (clienteModo === 'existente' && !clienteSeleccionado) { setError('Selecciona un cliente'); return }
     if (clienteModo === 'nuevo' && (!nombreNuevo.trim() || !numeroDocumentoNuevo.trim())) {
       setError('Indica el nombre y el número de documento del cliente'); return
@@ -213,7 +214,15 @@ export default function LocalSalePage() {
         {productoSeleccionado ? (
           <div className="bg-gray-50 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-black">{productoSeleccionado.nombre}</p>
+              <div>
+                <p className="text-sm font-semibold text-black">{productoSeleccionado.nombre}</p>
+                <p className="text-xs text-gray-500">
+                  {fmt(productoSeleccionado.precio)} c/u
+                  {productoSeleccionado.precioAntes && (
+                    <span className="text-gray-400 line-through ml-1.5">{fmt(productoSeleccionado.precioAntes)}</span>
+                  )}
+                </p>
+              </div>
               <button onClick={() => setProductoSeleccionado(null)} className="text-xs text-gray-400 hover:text-black">Cancelar</button>
             </div>
             {productoSeleccionado.variantes?.length > 0 && (
@@ -228,6 +237,9 @@ export default function LocalSalePage() {
             <div className="flex items-center gap-3">
               <input type="number" min="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)}
                 className="input-field w-24 text-sm" />
+              <span className="text-sm font-bold text-black">
+                {fmt(productoSeleccionado.precio * (Number(cantidad) || 0))}
+              </span>
               <button onClick={agregarItem} className="btn-primary text-xs"><Plus size={13} /> Agregar</button>
             </div>
           </div>
@@ -297,7 +309,7 @@ export default function LocalSalePage() {
       {error && <p className="text-sm text-red-500">{error}</p>}
 
       <div className="flex justify-end">
-        <button onClick={handleSubmit} disabled={saving} className="btn-primary">
+        <button onClick={handleSubmit} disabled={saving || items.length === 0 || !quote.total} className="btn-primary">
           {saving ? 'Registrando…' : 'Registrar venta'}
         </button>
       </div>
