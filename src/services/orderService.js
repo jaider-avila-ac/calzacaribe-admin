@@ -46,5 +46,6 @@ export const MOTIVOS_CANCELACION = [
   { value: 'envio_imposible',       label: 'Imposibilidad de realizar el envío' },
   { value: 'compra_duplicada',      label: 'Compra duplicada' },
   { value: 'acordado_cliente',      label: 'Solicitud acordada con el cliente' },
+  { value: 'pago_no_confirmado',    label: 'Pago no confirmado a tiempo' },
   { value: 'otro',                  label: 'Otro motivo' },
 ]
