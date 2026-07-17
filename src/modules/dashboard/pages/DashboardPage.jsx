@@ -161,7 +161,12 @@ export default function DashboardPage() {
           <h2 className="text-sm font-bold text-black">Pedidos por estado</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-50">
-          {['pagado', 'preparando', 'enviado', 'entregado'].map((estado) => {
+          {/* "pagado" no se muestra: es un estado de tránsito tan corto (todo pedido pasa
+              directo a "preparando" al confirmarse) que casi siempre está en 0 — mismo motivo
+              por el que se quitó de los filtros de Pedidos (ver ESTADOS_FILTRO_PEDIDOS). En su
+              lugar se muestra "pendiente_pago", que sí es información útil (pedidos esperando
+              confirmación de pago). */}
+          {['pendiente_pago', 'preparando', 'enviado', 'entregado'].map((estado) => {
             const found = byEstado.find((e) => e.estado === estado)
             return (
               <Link key={estado} to={`/pedidos?estado=${estado}`} className="px-5 py-4 text-center block hover:bg-gray-50 transition-colors">
