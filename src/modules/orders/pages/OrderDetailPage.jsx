@@ -411,18 +411,22 @@ export default function OrderDetailPage() {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-semibold text-black">
-              {dir.nombre_destinatario ?? order.cliente_nombre}
+              {dir.contacto_nombre ?? order.cliente_nombre}
             </p>
             <p className="text-xs text-gray-400">{order.cliente_email}</p>
             {dir.direccion && (
               <div className="flex items-center gap-1.5 text-xs text-gray-500">
                 <MapPin size={12} />
-                {dir.direccion}{dir.ciudad ? `, ${dir.ciudad}` : ''}{dir.departamento ? ` (${dir.departamento})` : ''}
+                {dir.direccion}
+                {dir.complemento ? `, ${dir.complemento}` : ''}
+                {dir.barrio ? `, ${dir.barrio}` : ''}
+                {dir.municipio ? `, ${dir.municipio}` : ''}
+                {dir.departamento ? ` (${dir.departamento})` : ''}
               </div>
             )}
-            {dir.telefono && (
+            {dir.contacto_telefono && (
               <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                <CreditCard size={12} /> {dir.telefono}
+                <CreditCard size={12} /> {dir.contacto_telefono}
               </div>
             )}
           </div>
