@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Plus, X, Check, Users, Pencil } from 'lucide-react'
 import { collaboratorService } from '../../../services/collaboratorService'
 import { tiendaConfigService } from '../../../services/tiendaConfigService'
+import { sucursalService } from '../../../services/sucursalService'
 import { authService } from '../../../services/authService'
 import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
@@ -18,7 +19,7 @@ const ROL_BADGE = { colaborador: 'info', bodega: 'warning', admin: 'dark' }
 
 function emptyForm() {
   return {
-    nombre: '', usuario: '', password: '', rol: 'colaborador',
+    nombre: '', usuario: '', password: '', rol: 'colaborador', sucursalId: '',
     apellido: '', telefono: '', tipoDocumento: 'CC', numeroDocumento: '', fechaNacimiento: '',
   }
 }
@@ -26,6 +27,7 @@ function emptyForm() {
 function formFromItem(item) {
   return {
     nombre: item.nombre ?? '', usuario: '', password: '', rol: item.rol,
+    sucursalId: item.sucursal_id ?? '',
     apellido: item.apellido ?? '', telefono: item.telefono ?? '',
     tipoDocumento: item.tipo_documento ?? 'CC', numeroDocumento: item.numero_documento ?? '',
     fechaNacimiento: item.fecha_nacimiento ?? '',
@@ -36,6 +38,7 @@ export default function CollaboratorsPage() {
   const rol = authService.getUser()?.rol
   const [items, setItems] = useState([])
   const [dominio, setDominio] = useState(null)
+  const [sucursales, setSucursales] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // null | 'create' | 'edit'
   const [editId, setEditId] = useState(null)
@@ -45,10 +48,11 @@ export default function CollaboratorsPage() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([collaboratorService.list(), tiendaConfigService.get()])
-      .then(([lista, cfg]) => {
+    Promise.all([collaboratorService.list(), tiendaConfigService.get(), sucursalService.list()])
+      .then(([lista, cfg, sucs]) => {
         setItems(Array.isArray(lista) ? lista : [])
         setDominio(cfg?.dominio_staff ?? null)
+        setSucursales(Array.isArray(sucs) ? sucs : [])
       })
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
@@ -136,6 +140,7 @@ export default function CollaboratorsPage() {
                 <tr>
                   <th className="table-header px-5 py-3 text-left">Nombre</th>
                   <th className="table-header px-4 py-3 text-left">Usuario</th>
+                  <th className="table-header px-4 py-3 text-center">Tienda</th>
                   <th className="table-header px-4 py-3 text-center">Rol</th>
                   <th className="table-header px-4 py-3 text-center">Estado</th>
                   <th className="table-header px-4 py-3 text-center">Acciones</th>
@@ -158,6 +163,7 @@ export default function CollaboratorsPage() {
                       </div>
                     </td>
                     <td className="table-cell px-4 text-gray-500">{c.email}</td>
+                    <td className="table-cell px-4 text-center text-gray-500">{c.sucursal_nombre ?? '—'}</td>
                     <td className="table-cell px-4 text-center">
                       <Badge variant={ROL_BADGE[c.rol] ?? 'default'}>{c.rol}</Badge>
                     </td>
@@ -191,6 +197,15 @@ export default function CollaboratorsPage() {
           <div className="grid grid-cols-2 gap-3">
             <Input label="Nombre" value={form.nombre} onChange={set('nombre')} required />
             <Input label="Apellido" value={form.apellido} onChange={set('apellido')} />
+          </div>
+
+          <div>
+            <label className="label-field">Tienda</label>
+            <select value={form.sucursalId} onChange={set('sucursalId')} className="input-field bg-white" required>
+              <option value="">Selecciona una tienda</option>
+              {sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">A esta tienda quedarán atribuidas las ventas que gestione.</p>
           </div>
 
           {modal === 'create' && (

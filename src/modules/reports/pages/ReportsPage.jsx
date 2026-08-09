@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { TrendingUp, ShoppingBag, Users } from 'lucide-react'
 import { reportService } from '../../../services/reportService'
+import { orderService } from '../../../services/orderService'
+import { sucursalService } from '../../../services/sucursalService'
 import { formatCurrency } from '../../../utils/format'
 
 const ESTADO_LABEL = {
@@ -25,6 +27,10 @@ function monthLabel(mes) {
 
 export default function ReportsPage() {
   const [mes,           setMes]           = useState(() => currentMonth())
+  const [colaboradorId, setColaboradorId] = useState('')
+  const [sucursalId,    setSucursalId]    = useState('')
+  const [colaboradores, setColaboradores] = useState([])
+  const [sucursales,    setSucursales]    = useState([])
   const [resumen,       setResumen]       = useState(null)
   const [byEstado,      setByEstado]      = useState([])
   const [topProductos,  setTopProductos]  = useState([])
@@ -32,12 +38,17 @@ export default function ReportsPage() {
   const [loading,       setLoading]       = useState(true)
 
   useEffect(() => {
+    orderService.getColaboradores().then((d) => setColaboradores(Array.isArray(d) ? d : [])).catch(() => {})
+    sucursalService.list().then((d) => setSucursales(Array.isArray(d) ? d : [])).catch(() => {})
+  }, [])
+
+  useEffect(() => {
     setLoading(true)
     Promise.all([
-      reportService.resumen(mes),
-      reportService.pedidosPorEstado(mes),
-      reportService.productosMasVendidos(mes),
-      reportService.ventasPorCategoria(mes),
+      reportService.resumen(mes, colaboradorId, sucursalId),
+      reportService.pedidosPorEstado(mes, colaboradorId, sucursalId),
+      reportService.productosMasVendidos(mes, colaboradorId, sucursalId),
+      reportService.ventasPorCategoria(mes, colaboradorId, sucursalId),
     ])
       .then(([res, estados, productos, categorias]) => {
         setResumen(res)
@@ -47,7 +58,7 @@ export default function ReportsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [mes])
+  }, [mes, colaboradorId, sucursalId])
 
   if (loading) {
     return <div className="py-20 text-center text-sm text-gray-400">Cargando reportes…</div>
@@ -60,12 +71,30 @@ export default function ReportsPage() {
           <h2 className="text-sm font-bold text-black">Periodo</h2>
           <p className="text-xs text-gray-400 capitalize">{monthLabel(mes)}</p>
         </div>
-        <input
-          type="month"
-          value={mes}
-          onChange={(e) => setMes(e.target.value || currentMonth())}
-          className="input-field w-auto text-sm"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={sucursalId}
+            onChange={(e) => setSucursalId(e.target.value)}
+            className="input-field w-auto text-sm bg-white"
+          >
+            <option value="">Todas las tiendas</option>
+            {sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+          </select>
+          <select
+            value={colaboradorId}
+            onChange={(e) => setColaboradorId(e.target.value)}
+            className="input-field w-auto text-sm bg-white"
+          >
+            <option value="">Todo el staff</option>
+            {colaboradores.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+          <input
+            type="month"
+            value={mes}
+            onChange={(e) => setMes(e.target.value || currentMonth())}
+            className="input-field w-auto text-sm"
+          />
+        </div>
       </div>
 
       {/* KPIs */}

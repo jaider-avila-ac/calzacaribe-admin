@@ -13,10 +13,11 @@ export const ESTADOS_FILTRO_PEDIDOS = ESTADOS_PEDIDO.filter((e) => e !== 'pagado
 const BASE = '/pedidos'
 
 export const orderService = {
-  getAll:       (estado, colaboradorId) => {
+  getAll:       (estado, colaboradorId, sucursalId) => {
     const params = new URLSearchParams()
     if (estado) params.set('estado', estado)
     if (colaboradorId) params.set('colaboradorId', colaboradorId)
+    if (sucursalId) params.set('sucursalId', sucursalId)
     const qs = params.toString()
     return api.get(qs ? `${BASE}?${qs}` : BASE)
   },

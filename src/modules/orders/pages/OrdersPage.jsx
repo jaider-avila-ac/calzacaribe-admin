@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, Search, AlertTriangle, UserPlus } from 'lucide-react'
 import { useOrders } from '../hooks/useOrders'
 import { orderService, ESTADOS_FILTRO_PEDIDOS } from '../../../services/orderService'
+import { sucursalService } from '../../../services/sucursalService'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -35,11 +36,14 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const [filterEstado, setFilterEstado] = useState(() => searchParams.get('estado') ?? '')
   const [filterColaborador, setFilterColaborador] = useState('')
+  const [filterSucursal, setFilterSucursal] = useState('')
   const [colaboradores, setColaboradores] = useState([])
+  const [sucursales, setSucursales] = useState([])
   const [tomando, setTomando] = useState(null)
 
   useEffect(() => {
     orderService.getColaboradores().then((d) => setColaboradores(Array.isArray(d) ? d : [])).catch(() => {})
+    sucursalService.list().then((d) => setSucursales(Array.isArray(d) ? d : [])).catch(() => {})
   }, [])
 
   const handleTomar = async (id) => {
@@ -63,7 +67,8 @@ export default function OrdersPage() {
       o.cliente_email?.toLowerCase().includes(q)
     const matchEstado = filterEstado ? o.estado === filterEstado : true
     const matchColaborador = filterColaborador ? String(o.colaborador_id) === filterColaborador : true
-    return matchSearch && matchEstado && matchColaborador
+    const matchSucursal = filterSucursal ? String(o.sucursal_id) === filterSucursal : true
+    return matchSearch && matchEstado && matchColaborador && matchSucursal
   })
 
   return (
@@ -75,6 +80,11 @@ export default function OrdersPage() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input placeholder="Buscar por #pedido o cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 input-field text-sm" />
           </div>
+          <select value={filterSucursal} onChange={(e) => setFilterSucursal(e.target.value)}
+            className="input-field bg-white text-sm w-40">
+            <option value="">Todas las tiendas</option>
+            {sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+          </select>
           <select value={filterColaborador} onChange={(e) => setFilterColaborador(e.target.value)}
             className="input-field bg-white text-sm w-48">
             <option value="">Todos los responsables</option>
@@ -111,6 +121,7 @@ export default function OrdersPage() {
                 <th className="table-header px-4 py-3 text-right">Total</th>
                 <th className="table-header px-4 py-3 text-center">Estado</th>
                 <th className="table-header px-4 py-3 text-left">Responsable</th>
+                <th className="table-header px-4 py-3 text-left">Tienda</th>
                 <th className="table-header px-4 py-3 text-center">Acciones</th>
               </tr>
             </thead>
@@ -147,6 +158,7 @@ export default function OrdersPage() {
                       </button>
                     )}
                   </td>
+                  <td className="table-cell px-4 text-gray-500 text-xs">{order.sucursal_nombre ?? '—'}</td>
                   <td className="table-cell px-4 text-center">
                     <button onClick={() => navigate(`/pedidos/${order.id}`)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Ver detalle">
                       <Eye size={15} />
