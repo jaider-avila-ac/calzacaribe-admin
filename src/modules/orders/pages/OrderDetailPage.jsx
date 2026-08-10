@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle, Link2, Ban, History, UserPlus, UserCog } from 'lucide-react'
-import { orderService, ESTADOS_PEDIDO, MOTIVOS_CANCELACION } from '../../../services/orderService'
+import { orderService, ESTADOS_PEDIDO, ESTADOS_CORREGIBLES, SIGUIENTE_PASO, MOTIVOS_CANCELACION } from '../../../services/orderService'
 import { reembolsoService } from '../../../services/reembolsoService'
 import { authService } from '../../../services/authService'
 import Badge from '../../../components/ui/Badge'
@@ -56,6 +56,11 @@ export default function OrderDetailPage() {
   const [seguimientoError, setSeguimientoError] = useState('')
   const [savingEstado, setSavingEstado] = useState(false)
   const [estadoError, setEstadoError] = useState('')
+  const [correccionOpen, setCorreccionOpen] = useState(false)
+  const [correccionEstado, setCorreccionEstado] = useState('')
+  const [correccionMotivo, setCorreccionMotivo] = useState('')
+  const [correccionLoading, setCorreccionLoading] = useState(false)
+  const [correccionError, setCorreccionError] = useState('')
 
   const [historial, setHistorial] = useState([])
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -142,18 +147,41 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handleCambiarEstado = async (e) => {
-    const nuevoEstado = e.target.value
-    if (nuevoEstado === order.estado) return
+  const handleAvanzarEstado = async () => {
+    const siguiente = SIGUIENTE_PASO[order.estado]
+    if (!siguiente) return
     setSavingEstado(true)
     setEstadoError('')
     try {
-      await orderService.updateEstado(id, nuevoEstado)
+      await orderService.updateEstado(id, siguiente)
       load()
     } catch (err) {
       setEstadoError(err.message || 'No se pudo cambiar el estado')
     } finally {
       setSavingEstado(false)
+    }
+  }
+
+  const abrirCorreccion = () => {
+    setCorreccionEstado('')
+    setCorreccionMotivo('')
+    setCorreccionError('')
+    setCorreccionOpen(true)
+  }
+
+  const handleCorregirEstado = async () => {
+    if (!correccionEstado) { setCorreccionError('Selecciona el estado correcto'); return }
+    if (!correccionMotivo.trim()) { setCorreccionError('Explica el motivo de la corrección'); return }
+    setCorreccionLoading(true)
+    setCorreccionError('')
+    try {
+      await orderService.corregirEstado(id, correccionEstado, correccionMotivo.trim())
+      setCorreccionOpen(false)
+      load()
+    } catch (err) {
+      setCorreccionError(err.message || 'No se pudo corregir el estado')
+    } finally {
+      setCorreccionLoading(false)
     }
   }
 
@@ -243,24 +271,25 @@ export default function OrderDetailPage() {
           <p className="page-subtitle">{formatDate(order.creado_en)}</p>
         </div>
         <div className="ml-auto flex flex-col items-end gap-1">
-          {order.estado === 'pendiente_pago' ? (
-            <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>
-          ) : (
-            <select
-              value={order.estado}
-              onChange={handleCambiarEstado}
+          <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>
+          {SIGUIENTE_PASO[order.estado] && (
+            <button
+              onClick={handleAvanzarEstado}
               disabled={savingEstado}
-              className={`text-xs font-bold border-0 px-3 py-1.5 cursor-pointer disabled:opacity-60 ${BADGE_MAP[order.estado] === 'success' ? 'bg-green-100 text-green-700' : BADGE_MAP[order.estado] === 'danger' ? 'bg-red-100 text-red-600' : BADGE_MAP[order.estado] === 'info' ? 'bg-blue-100 text-blue-700' : 'bg-gray-800 text-white'}`}
+              className="btn-primary text-xs mt-1 disabled:opacity-60"
             >
-              {ESTADOS_PEDIDO.map((e) => (
-                <option key={e} value={e}>{ESTADO_LABEL[e]}</option>
-              ))}
-            </select>
+              {savingEstado ? 'Guardando…' : `Marcar como ${ESTADO_LABEL[SIGUIENTE_PASO[order.estado]]}`}
+            </button>
           )}
           {estadoError && <span className="text-[11px] text-red-500">{estadoError}</span>}
           {puedeCancelar && (
             <button onClick={abrirCancelar} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 mt-1">
               <Ban size={12} /> Cancelar compra y reembolsar
+            </button>
+          )}
+          {isAdmin && ESTADOS_CORREGIBLES.includes(order.estado) && (
+            <button onClick={abrirCorreccion} className="text-[11px] font-semibold text-gray-400 hover:text-black transition-colors mt-0.5">
+              Corregir estado…
             </button>
           )}
         </div>
@@ -613,6 +642,33 @@ export default function OrderDetailPage() {
 
           <button onClick={handleCancelar} disabled={cancelLoading} className="btn-danger text-xs w-full justify-center">
             {cancelLoading ? 'Procesando...' : 'Confirmar cancelación y reembolso'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={correccionOpen} onClose={() => setCorreccionOpen(false)} title="Corregir estado" size="md">
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500">
+            Para saltar pasos o retroceder el estado (ej. te equivocaste al marcarlo). Queda registrado
+            en el historial y la auditoría con el motivo que expliques.
+          </p>
+          <div>
+            <label className="label-field">Estado correcto</label>
+            <select value={correccionEstado} onChange={(e) => setCorreccionEstado(e.target.value)} className="input-field bg-white">
+              <option value="">Selecciona...</option>
+              {ESTADOS_CORREGIBLES.filter((e) => e !== order.estado).map((e) => (
+                <option key={e} value={e}>{ESTADO_LABEL[e]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label-field">Motivo de la corrección</label>
+            <textarea value={correccionMotivo} onChange={(e) => setCorreccionMotivo(e.target.value)} rows={2}
+              className="input-field bg-white resize-none" placeholder="Ej: se marcó como enviado por error, todavía está en preparación..." />
+          </div>
+          {correccionError && <p className="text-xs text-red-500">{correccionError}</p>}
+          <button onClick={handleCorregirEstado} disabled={correccionLoading} className="btn-primary text-xs w-full justify-center">
+            {correccionLoading ? 'Guardando...' : 'Confirmar corrección'}
           </button>
         </div>
       </Modal>

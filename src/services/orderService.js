@@ -7,8 +7,20 @@ export const ESTADOS_PEDIDO = [
 // Para las pestañas de filtro rápido en la tabla de Pedidos: "pagado" se omite ahí porque
 // todo pedido que llega a esta lista ya está pagado (Wompi no deja crear uno si el pago no
 // se aprobó) — como filtro no distingue nada. El estado en sí se mantiene intacto en
-// ESTADOS_PEDIDO (el selector del detalle sí lo necesita, por si hay que retroceder a él).
+// ESTADOS_PEDIDO (las etiquetas/badges del detalle lo necesitan).
 export const ESTADOS_FILTRO_PEDIDOS = ESTADOS_PEDIDO.filter((e) => e !== 'pagado')
+
+// Único paso siguiente válido por estado — espejo de PedidoService.SIGUIENTE_PASO en el
+// backend. "cancelado" y "devuelto" no aparecen acá: tienen su propio flujo (botón Cancelar /
+// devoluciones), nunca se llega desde el botón de "siguiente paso" (ver F-05 de la auditoría).
+export const SIGUIENTE_PASO = {
+  pagado: 'preparando',
+  preparando: 'enviado',
+  enviado: 'entregado',
+}
+
+// Estados que acepta la corrección excepcional (saltar/retroceder con motivo obligatorio).
+export const ESTADOS_CORREGIBLES = ['pagado', 'preparando', 'enviado', 'entregado']
 
 const BASE = '/pedidos'
 
@@ -27,6 +39,7 @@ export const orderService = {
   asignar:      (id, colaboradorId) => api.patch(`${BASE}/${id}/asignar`, { colaborador_id: colaboradorId }),
   getById:      (id)     => api.get(`${BASE}/${id}`),
   updateEstado: (id, estado) => api.patch(`${BASE}/${id}/estado`, { estado }),
+  corregirEstado: (id, estado, motivo) => api.post(`${BASE}/${id}/corregir-estado`, { estado, motivo }),
   resolverAlertaStock: (id) => api.post(`${BASE}/${id}/resolver-alerta-stock`),
   updateSeguimiento: (id, { transportadora, codigoRastreo, link, mostrar }) =>
     api.patch(`${BASE}/${id}/link-seguimiento`, {
