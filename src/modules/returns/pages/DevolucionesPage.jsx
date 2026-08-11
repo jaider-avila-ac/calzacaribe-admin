@@ -25,6 +25,12 @@ const ESTADO_LABEL = {
   cancelada: 'Cancelada',
 }
 
+const TIPO_LABEL = {
+  retracto: 'Retracto (cambió de opinión)',
+  defecto: 'Defecto de fábrica',
+}
+const TIPO_BADGE = { retracto: 'default', defecto: 'warning' }
+
 export default function DevolucionesPage() {
   const [solicitudes, setSolicitudes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -80,6 +86,7 @@ export default function DevolucionesPage() {
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="table-header px-5 py-3 text-left">#Pedido</th>
+                <th className="table-header px-4 py-3 text-left">Tipo</th>
                 <th className="table-header px-4 py-3 text-left">Motivo</th>
                 <th className="table-header px-4 py-3 text-left">Fecha</th>
                 <th className="table-header px-4 py-3 text-center">Estado</th>
@@ -90,6 +97,9 @@ export default function DevolucionesPage() {
               {solicitudes.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                   <td className="table-cell px-5 font-bold text-black">{s.numero_pedido}</td>
+                  <td className="table-cell px-4">
+                    <Badge variant={TIPO_BADGE[s.tipo]}>{TIPO_LABEL[s.tipo] || s.tipo}</Badge>
+                  </td>
                   <td className="table-cell px-4 max-w-xs truncate">{s.motivo}</td>
                   <td className="table-cell px-4 text-gray-500">{formatDate(s.creado_en)}</td>
                   <td className="table-cell px-4 text-center">
@@ -167,6 +177,23 @@ function DetalleDevolucion({ solicitud, direcciones, onCambiado }) {
 
   return (
     <div className="space-y-4">
+      <div>
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Tipo de solicitud</p>
+        <Badge variant={TIPO_BADGE[solicitud.tipo]}>{TIPO_LABEL[solicitud.tipo] || solicitud.tipo}</Badge>
+        {solicitud.tipo === 'retracto' && (
+          <p className="text-xs text-gray-400 mt-1.5">
+            Derecho de retracto: solo procede dentro de los 5 días hábiles desde la entrega. El
+            backend ya validó el plazo al crear la solicitud — no hace falta revisarlo de nuevo.
+          </p>
+        )}
+        {solicitud.tipo === 'defecto' && (
+          <p className="text-xs text-gray-400 mt-1.5">
+            Defecto de fábrica: revisa las fotos y confirma que la falla no es por mal uso antes
+            de aprobar.
+          </p>
+        )}
+      </div>
+
       <div>
         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Motivo del cliente</p>
         <p className="text-sm text-black bg-gray-50 p-3">{solicitud.motivo}</p>
