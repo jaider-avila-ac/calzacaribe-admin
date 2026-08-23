@@ -592,7 +592,11 @@ export default function OrderDetailPage() {
           )}
           <div className="flex justify-between px-5 py-2.5 text-sm text-gray-500">
             <span className="flex items-center gap-1"><Truck size={13} /> Envío</span>
-            <span>{order.envio === 0 ? 'Gratis' : formatCurrency(order.envio)}</span>
+            <span>
+              {order.envio_contra_entrega
+                ? 'Paga contra entrega'
+                : order.envio === 0 ? 'Gratis' : formatCurrency(order.envio)}
+            </span>
           </div>
           <div className="flex justify-between items-center px-5 py-4 bg-gray-50">
             <span className="text-sm font-semibold text-gray-700">Total del pedido</span>

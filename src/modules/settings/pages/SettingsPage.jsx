@@ -188,6 +188,7 @@ export default function SettingsPage() {
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => getTheme())
 
+  const [envioModo, setEnvioModo] = useState('contra_entrega')
   const [envioGratisActivo, setEnvioGratisActivo] = useState(false)
   const [envioGratisDesde, setEnvioGratisDesde] = useState('')
   const [envioCosto, setEnvioCosto] = useState('')
@@ -198,6 +199,7 @@ export default function SettingsPage() {
   useEffect(() => {
     tiendaConfigService.get()
       .then((cfg) => {
+        setEnvioModo(cfg?.envio_modo === 'fijo' ? 'fijo' : 'contra_entrega')
         setEnvioGratisActivo(Boolean(cfg?.envio_gratis_activo))
         setEnvioGratisDesde(cfg?.envio_gratis_desde != null ? String(cfg.envio_gratis_desde) : '')
         setEnvioCosto(cfg?.envio_costo != null ? String(cfg.envio_costo) : '')
@@ -221,6 +223,7 @@ export default function SettingsPage() {
     setSaving(true)
     try {
       await tiendaConfigService.update({
+        envioModo,
         envioGratisActivo,
         envioGratisDesde: Number(envioGratisDesde) || 0,
         envioCosto: Number(envioCosto) || 0,
@@ -318,52 +321,88 @@ export default function SettingsPage() {
             <CreditCard size={16} className="text-gray-500" />
             <h2 className="text-sm font-bold text-black">Envíos y pagos</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="label-field">Moneda</label>
+            <select value={form.moneda} onChange={set('moneda')} className="input-field bg-white sm:max-w-[50%]">
+              <option value="COP">COP - Peso Colombiano</option>
+              <option value="USD">USD - Dólar</option>
+            </select>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100 space-y-3">
             <div>
-              <label className="label-field">Moneda</label>
-              <select value={form.moneda} onChange={set('moneda')} className="input-field bg-white">
-                <option value="COP">COP - Peso Colombiano</option>
-                <option value="USD">USD - Dólar</option>
-              </select>
+              <p className="text-xs font-bold text-black">¿Cómo se cobra el envío?</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                El costo real de envío puede variar bastante y no hay nada que lo calcule automático —
+                por eso, por defecto, es el cliente quien le paga al transportador al recibir (contra
+                entrega) y no se cobra nada de envío en el checkout online. Actívalo aquí si prefieres
+                que la tienda sí cobre un costo fijo.
+              </p>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setEnvioModo('contra_entrega')}
+                disabled={!envioConfigLoaded}
+                className={`text-left p-3 border text-xs disabled:opacity-50 ${
+                  envioModo === 'contra_entrega' ? 'border-admin-accent bg-admin-accent/5' : 'border-gray-200'
+                }`}
+              >
+                <p className="font-bold text-black">Contra entrega (recomendado)</p>
+                <p className="text-gray-500 mt-0.5">El cliente paga el envío directo al recibir. No se cobra online.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEnvioModo('fijo')}
+                disabled={!envioConfigLoaded}
+                className={`text-left p-3 border text-xs disabled:opacity-50 ${
+                  envioModo === 'fijo' ? 'border-admin-accent bg-admin-accent/5' : 'border-gray-200'
+                }`}
+              >
+                <p className="font-bold text-black">Costo fijo</p>
+                <p className="text-gray-500 mt-0.5">La tienda cobra un costo de envío controlado por ti.</p>
+              </button>
+            </div>
+          </div>
+
+          <div className={`pt-2 border-t border-gray-100 space-y-4 ${envioModo !== 'fijo' ? 'opacity-50' : ''}`}>
             <Input
               label="Costo de envío base (COP)"
               type="number"
               value={envioCosto}
               onChange={(e) => setEnvioCosto(e.target.value)}
-              disabled={!envioConfigLoaded}
+              disabled={!envioConfigLoaded || envioModo !== 'fijo'}
               placeholder={envioConfigLoaded ? '' : 'Cargando...'}
             />
-          </div>
-
-          <div className="pt-2 border-t border-gray-100 space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold text-black">Envío gratis por monto mínimo</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Muestra la barra de progreso "te faltan $X para envío gratis" en la tienda.
-                </p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold text-black">Envío gratis por monto mínimo</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Muestra la barra de progreso "te faltan $X para envío gratis" en la tienda.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEnvioGratisActivo((v) => !v)}
+                  disabled={!envioConfigLoaded || envioModo !== 'fijo'}
+                  className={`relative h-7 w-14 transition-colors flex-shrink-0 disabled:opacity-50 ${envioGratisActivo ? 'bg-admin-accent' : 'bg-gray-200'}`}
+                  aria-pressed={envioGratisActivo}
+                  aria-label="Activar envío gratis por monto mínimo"
+                >
+                  <span className={`absolute top-1 h-5 w-5 bg-white shadow-sm transition-transform ${envioGratisActivo ? 'translate-x-8' : 'translate-x-1'}`} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setEnvioGratisActivo((v) => !v)}
-                disabled={!envioConfigLoaded}
-                className={`relative h-7 w-14 transition-colors flex-shrink-0 disabled:opacity-50 ${envioGratisActivo ? 'bg-admin-accent' : 'bg-gray-200'}`}
-                aria-pressed={envioGratisActivo}
-                aria-label="Activar envío gratis por monto mínimo"
-              >
-                <span className={`absolute top-1 h-5 w-5 bg-white shadow-sm transition-transform ${envioGratisActivo ? 'translate-x-8' : 'translate-x-1'}`} />
-              </button>
+              <Input
+                label="Compra mín. para envío gratis (COP)"
+                type="number"
+                value={envioGratisDesde}
+                onChange={(e) => setEnvioGratisDesde(e.target.value)}
+                placeholder={envioConfigLoaded ? '' : 'Cargando...'}
+                disabled={!envioGratisActivo || envioModo !== 'fijo'}
+                className={!envioGratisActivo ? 'opacity-50' : ''}
+              />
             </div>
-            <Input
-              label="Compra mín. para envío gratis (COP)"
-              type="number"
-              value={envioGratisDesde}
-              onChange={(e) => setEnvioGratisDesde(e.target.value)}
-              placeholder={envioConfigLoaded ? '' : 'Cargando...'}
-              disabled={!envioGratisActivo}
-              className={!envioGratisActivo ? 'opacity-50' : ''}
-            />
           </div>
         </div>
 
