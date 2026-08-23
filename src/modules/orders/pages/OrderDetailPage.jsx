@@ -266,7 +266,10 @@ export default function OrderDetailPage() {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="page-title">{order.numero}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">{order.numero}</h1>
+            {order.canal === 'local' && <Badge variant="default">Venta local</Badge>}
+          </div>
           <p className="page-subtitle">{formatDate(order.creado_en)}</p>
         </div>
         <div className="ml-auto flex flex-col items-end gap-1">

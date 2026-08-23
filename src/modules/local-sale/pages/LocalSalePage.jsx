@@ -35,9 +35,10 @@ export default function LocalSalePage() {
   const [productoSeleccionado, setProductoSeleccionado] = useState(null)
   const [varSeleccionada, setVarSeleccionada] = useState('')
   const [cantidad, setCantidad] = useState(1)
+  const [precioVentaInput, setPrecioVentaInput] = useState('')
 
   const [items, setItems] = useState([])
-  const [quote, setQuote] = useState({ items: [], total: 0 })
+  const [quote, setQuote] = useState({ items: [], total: 0, subtotal: 0, descuento: 0 })
   const [metodoPago, setMetodoPago] = useState('EFECTIVO')
   const [notas, setNotas] = useState('')
   const [saving, setSaving] = useState(false)
@@ -60,7 +61,7 @@ export default function LocalSalePage() {
 
   useEffect(() => {
     let alive = true
-    if (items.length === 0) { setQuote({ items: [], total: 0 }); return () => { alive = false } }
+    if (items.length === 0) { setQuote({ items: [], total: 0, subtotal: 0, descuento: 0 }); return () => { alive = false } }
     ventaLocalService.quote(items)
       .then((data) => { if (alive) setQuote(data) })
       .catch((err) => { if (alive) setError(err.message || 'No se pudo cotizar la venta') })
@@ -78,6 +79,7 @@ export default function LocalSalePage() {
     const detalle = await productService.getById(p.id)
     setProductoSeleccionado(detalle)
     setVarSeleccionada(detalle.variantes?.[0]?.id ?? '')
+    setPrecioVentaInput(String(detalle.precio ?? ''))
     setBuscarProducto('')
     setResultadosProducto([])
   }
@@ -86,15 +88,24 @@ export default function LocalSalePage() {
     if (!productoSeleccionado) return
     const variante = productoSeleccionado.variantes?.find((v) => String(v.id) === String(varSeleccionada))
     if (productoSeleccionado.variantes?.length > 0 && !variante) return
+    const precioCatalogo = productoSeleccionado.precio
+    const precioVenta = Number(precioVentaInput)
+    if (!precioVenta || precioVenta <= 0) { setError('Indica un precio de venta mayor a $0'); return }
+    if (precioVenta > precioCatalogo) { setError('El precio de venta no puede ser mayor al de catálogo'); return }
+    setError('')
     setItems((prev) => [...prev, {
       prdId: productoSeleccionado.id,
       varId: variante ? variante.id : null,
       nombre: productoSeleccionado.nombre,
       varLabel: variante ? [variante.talla, variante.color].filter(Boolean).join(' / ') : null,
       cantidad: Number(cantidad) || 1,
+      // null = se cobra el precio de catálogo tal cual; solo se manda si de verdad quedó distinto
+      // (evita mandar un "descuento de $0" que el backend tendría que descartar igual).
+      precioVenta: precioVenta && precioVenta !== precioCatalogo ? precioVenta : null,
     }])
     setProductoSeleccionado(null)
     setCantidad(1)
+    setPrecioVentaInput('')
   }
 
   const quitarItem = (idx) => setItems((prev) => prev.filter((_, i) => i !== idx))
@@ -248,13 +259,30 @@ export default function LocalSalePage() {
               </select>
             )}
             <div className="flex items-center gap-3">
-              <input type="number" min="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)}
-                className="input-field w-24 text-sm" />
-              <span className="text-sm font-bold text-black">
-                {fmt(productoSeleccionado.precio * (Number(cantidad) || 0))}
+              <div>
+                <label className="label-field !mb-1">Cantidad</label>
+                <input type="number" min="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)}
+                  className="input-field w-20 text-sm" />
+              </div>
+              <div>
+                <label className="label-field !mb-1">Precio de venta</label>
+                <input type="number" min="1" max={productoSeleccionado.precio} value={precioVentaInput}
+                  onChange={(e) => setPrecioVentaInput(e.target.value)}
+                  className="input-field w-28 text-sm" />
+              </div>
+              <span className="text-sm font-bold text-black self-end pb-2">
+                {fmt((Number(precioVentaInput) || 0) * (Number(cantidad) || 0))}
               </span>
-              <button onClick={agregarItem} className="btn-primary text-xs"><Plus size={13} /> Agregar</button>
+              <button onClick={agregarItem} className="btn-primary text-xs self-end"><Plus size={13} /> Agregar</button>
             </div>
+            {Number(precioVentaInput) > 0 && Number(precioVentaInput) < productoSeleccionado.precio && (
+              <p className="text-xs text-admin-accent">
+                Descuento de {fmt(productoSeleccionado.precio - Number(precioVentaInput))} c/u sobre el precio de catálogo
+              </p>
+            )}
+            {Number(precioVentaInput) > productoSeleccionado.precio && (
+              <p className="text-xs text-red-500">El precio de venta no puede ser mayor al de catálogo</p>
+            )}
           </div>
         ) : (
           <div className="relative">
@@ -292,7 +320,14 @@ export default function LocalSalePage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-black">{fmt(priced?.subtotal)}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-black">{fmt(priced?.subtotal)}</span>
+                    {priced?.descuentoUnitario > 0 && (
+                      <p className="text-[11px] text-admin-accent">
+                        -{fmt(priced.descuentoUnitario * item.cantidad)} desc.
+                      </p>
+                    )}
+                  </div>
                   <button onClick={() => quitarItem(idx)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600">
                     <Trash2 size={14} />
                   </button>
@@ -300,7 +335,19 @@ export default function LocalSalePage() {
               </div>
               )
             })}
-            <div className="flex items-center justify-between pt-3">
+            {quote.descuento > 0 && (
+              <div className="flex items-center justify-between pt-3">
+                <span className="text-sm text-gray-500">Subtotal (catálogo)</span>
+                <span className="text-sm text-gray-500">{fmt(quote.subtotal)}</span>
+              </div>
+            )}
+            {quote.descuento > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-admin-accent font-semibold">Descuento</span>
+                <span className="text-sm text-admin-accent font-semibold">-{fmt(quote.descuento)}</span>
+              </div>
+            )}
+            <div className={`flex items-center justify-between ${quote.descuento > 0 ? '' : 'pt-3'}`}>
               <span className="text-sm font-bold text-black">Total</span>
               <span className="text-lg font-black text-black">{fmt(quote.total)}</span>
             </div>

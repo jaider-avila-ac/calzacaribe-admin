@@ -15,6 +15,7 @@ const ESTADO_COLORS = {
   pendiente_pago: 'bg-yellow-400', pagado: 'bg-violet-500', preparando: 'bg-gray-500',
   enviado: 'bg-gray-700', entregado: 'bg-admin-accent', cancelado: 'bg-red-500', devuelto: 'bg-orange-400',
 }
+const CANAL_LABEL = { online: 'Tienda online', local: 'Venta local (mostrador)' }
 
 function currentMonth() {
   const now = new Date()
@@ -37,6 +38,7 @@ export default function ReportsPage() {
   const [byEstado,      setByEstado]      = useState([])
   const [topProductos,  setTopProductos]  = useState([])
   const [porCategoria,  setPorCategoria]  = useState([])
+  const [porCanal,      setPorCanal]      = useState([])
   const [loading,       setLoading]       = useState(true)
 
   useEffect(() => {
@@ -51,12 +53,14 @@ export default function ReportsPage() {
       reportService.pedidosPorEstado(mes, colaboradorId, sucursalId),
       reportService.productosMasVendidos(mes, colaboradorId, sucursalId),
       reportService.ventasPorCategoria(mes, colaboradorId, sucursalId),
+      reportService.ventasPorCanal(mes, colaboradorId, sucursalId),
     ])
-      .then(([res, estados, productos, categorias]) => {
+      .then(([res, estados, productos, categorias, canales]) => {
         setResumen(res)
         setByEstado(Array.isArray(estados)    ? estados    : [])
         setTopProductos(Array.isArray(productos)  ? productos  : [])
         setPorCategoria(Array.isArray(categorias) ? categorias : [])
+        setPorCanal(Array.isArray(canales) ? canales : [])
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -199,6 +203,26 @@ export default function ReportsPage() {
           )}
         </div>
 
+        {/* Ventas por canal — tienda online vs. mostrador */}
+        <div className="section-card p-5">
+          <h2 className="text-sm font-bold text-black mb-4">Ventas por canal</h2>
+          {porCanal.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">Sin datos</p>
+          ) : (
+            <div className="space-y-3">
+              {porCanal.map(({ canal, pedidos, unidades, total }) => (
+                <div key={canal} className="flex items-center justify-between border-b border-gray-50 last:border-0 py-2">
+                  <div>
+                    <p className="text-sm font-semibold text-black">{CANAL_LABEL[canal] ?? canal}</p>
+                    <p className="text-xs text-gray-400">{pedidos} {pedidos === 1 ? 'pedido' : 'pedidos'} · {unidades} unidades</p>
+                  </div>
+                  <span className="text-sm font-black text-black">{formatCurrency(total)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Resumen del periodo */}
         <div className="section-card p-5 space-y-4">
           <h2 className="text-sm font-bold text-black capitalize">{monthLabel(mes)}</h2>
@@ -207,6 +231,7 @@ export default function ReportsPage() {
               { label: 'Ingresos', valor: formatCurrency(resumen?.total_ingresos ?? 0) },
               { label: 'Por productos', valor: formatCurrency(resumen?.ingresos_productos ?? 0), sub: true },
               { label: 'Por envío cobrado', valor: formatCurrency(resumen?.ingresos_envio ?? 0), sub: true },
+              { label: 'Descuentos (venta local)', valor: formatCurrency(resumen?.total_descuentos ?? 0), sub: true },
               { label: 'Pedidos',  valor: resumen?.total_pedidos ?? 0 },
               { label: 'Clientes nuevos', valor: resumen?.total_clientes ?? 0 },
             ].map(({ label, valor, sub }) => (

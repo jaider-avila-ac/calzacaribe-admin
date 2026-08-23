@@ -16,4 +16,5 @@ export const reportService = {
   pedidosPorEstado:     (mes, colaboradorId, sucursalId) => api.get(withFiltros(`${BASE}/pedidos-por-estado`, mes, colaboradorId, sucursalId)),
   productosMasVendidos: (mes, colaboradorId, sucursalId) => api.get(withFiltros(`${BASE}/productos-mas-vendidos`, mes, colaboradorId, sucursalId)),
   ventasPorCategoria:   (mes, colaboradorId, sucursalId) => api.get(withFiltros(`${BASE}/ventas-por-categoria`, mes, colaboradorId, sucursalId)),
+  ventasPorCanal:       (mes, colaboradorId, sucursalId) => api.get(withFiltros(`${BASE}/ventas-por-canal`, mes, colaboradorId, sucursalId)),
 }

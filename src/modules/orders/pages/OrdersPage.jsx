@@ -135,6 +135,9 @@ export default function OrdersPage() {
                         <AlertTriangle size={13} className="text-red-500 flex-shrink-0" title="Faltante de stock sin resolver" />
                       )}
                     </div>
+                    {order.canal === 'local' && (
+                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Mostrador</span>
+                    )}
                   </td>
                   <td className="table-cell px-4">
                     <div>
