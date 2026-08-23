@@ -29,6 +29,7 @@ const NAV = [
     items: [
       { label: 'Pedidos',      path: '/pedidos'      },
       { label: 'Devoluciones', path: '/devoluciones' },
+      { label: 'Preguntas',    path: '/preguntas'    },
       { label: 'Venta local',  path: '/venta-local'  },
       { label: 'Clientes',    path: '/clientes'    },
     ],

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Edit2, Trash2, Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import { categoryService } from '../../../services/categoryService'
+import { productService } from '../../../services/productService'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
 import { formatCurrency } from '../../../utils/format'
@@ -42,8 +43,24 @@ export default function ProductsPage() {
     q: debouncedSearch || undefined,
   })
 
-  const handleDelete = (id, nombre) => {
-    if (confirm(`¿Eliminar "${nombre}"?`)) remove(id)
+  // El admin tiene que ser consciente de que borrar el producto también borra sus reseñas y
+  // preguntas (se van en cascada, a diferencia de los pedidos, que nunca se ven afectados) — se
+  // consulta el impacto antes de confirmar en vez de avisar recién después de que ya se borró.
+  const handleDelete = async (id, nombre) => {
+    let advertencia = ''
+    try {
+      const impacto = await productService.impactoEliminacion(id)
+      const partes = []
+      if (impacto?.resenas) partes.push(`${impacto.resenas} reseña${impacto.resenas === 1 ? '' : 's'}`)
+      if (impacto?.preguntas) partes.push(`${impacto.preguntas} pregunta${impacto.preguntas === 1 ? '' : 's'}`)
+      if (partes.length) {
+        advertencia = `\n\nEsto también borrará ${partes.join(' y ')} de este producto — esa información no se puede recuperar. Los pedidos ya hechos no se ven afectados.`
+      }
+    } catch {
+      // Si no se pudo consultar el impacto, se sigue permitiendo borrar (no bloquear la acción
+      // por un problema de red) pero sin la advertencia detallada.
+    }
+    if (confirm(`¿Eliminar "${nombre}"?${advertencia}`)) remove(id)
   }
 
   const from = totalElements === 0 ? 0 : page * PAGE_SIZE + 1

@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCheck, ShoppingBag, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Bell, CheckCheck, ShoppingBag, AlertTriangle, CheckCircle2, MessageCircleQuestion } from 'lucide-react'
 import { useNotifications } from '../../hooks/useNotifications'
 
 function rutaPara(n) {
   if (n.entidad_tipo === 'pedido' && n.entidad_id) return `/pedidos/${n.entidad_id}`
+  // La pregunta se abre desde el listado (no hay ruta de detalle propia) — igual navega para
+  // que el admin la vea en contexto, en vez de dejar la notificación sin ningún destino.
+  if (n.entidad_tipo === 'pregunta') return '/preguntas'
   return null
 }
 
 const TIPO_META = {
-  pedido_nuevo:          { Icon: ShoppingBag,   className: 'text-black' },
-  alerta_stock:          { Icon: AlertTriangle, className: 'text-red-600' },
-  alerta_stock_resuelta: { Icon: CheckCircle2,  className: 'text-admin-accent' },
-  otro:                  { Icon: Bell,          className: 'text-gray-600' },
+  pedido_nuevo:          { Icon: ShoppingBag,           className: 'text-black' },
+  alerta_stock:          { Icon: AlertTriangle,         className: 'text-red-600' },
+  alerta_stock_resuelta: { Icon: CheckCircle2,          className: 'text-admin-accent' },
+  pregunta_nueva:        { Icon: MessageCircleQuestion, className: 'text-black' },
+  otro:                  { Icon: Bell,                  className: 'text-gray-600' },
 }
 
 function tiempoRelativo(str) {

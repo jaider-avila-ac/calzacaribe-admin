@@ -14,4 +14,5 @@ export const productService = {
   create:    (data) => api.post(BASE, data),
   update:    (id, data) => api.put(`${BASE}/${id}`, data),
   remove:    (id)   => api.delete(`${BASE}/${id}`),
+  impactoEliminacion: (id) => api.get(`${BASE}/${id}/impacto-eliminacion`),
 }
