@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle, Link2, Ban, History, UserPlus, UserCog } from 'lucide-react'
-import { orderService, ESTADOS_PEDIDO, ESTADOS_CORREGIBLES, SIGUIENTE_PASO, MOTIVOS_CANCELACION } from '../../../services/orderService'
+import { orderService, ESTADOS_PEDIDO, ESTADOS_CORREGIBLES, SIGUIENTE_PASO, MOTIVOS_CANCELACION, METODO_PAGO_LABEL } from '../../../services/orderService'
 import { reembolsoService } from '../../../services/reembolsoService'
 import { authService } from '../../../services/authService'
 import Badge from '../../../components/ui/Badge'
@@ -10,7 +10,6 @@ import { formatCurrency, formatDate } from '../../../utils/format'
 
 const REEMBOLSO_BADGE = { pendiente: 'warning', en_proceso: 'info', completado: 'success', rechazado: 'danger', error: 'danger' }
 const REEMBOLSO_LABEL = { pendiente: 'Pendiente', en_proceso: 'En proceso', completado: 'Completado', rechazado: 'Rechazado', error: 'Error' }
-const METODO_PAGO_LABEL = { CARD: 'Tarjeta', NEQUI: 'Nequi', PSE: 'PSE', BANCOLOMBIA_TRANSFER: 'Transferencia Bancolombia', EFECTIVO: 'Efectivo', OTRO: 'Otro' }
 
 const BADGE_MAP = {
   pendiente_pago: 'warning',

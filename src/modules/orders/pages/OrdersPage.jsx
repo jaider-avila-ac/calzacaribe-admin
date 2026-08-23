@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, Search, AlertTriangle, UserPlus } from 'lucide-react'
 import { useOrders } from '../hooks/useOrders'
-import { orderService, ESTADOS_FILTRO_PEDIDOS } from '../../../services/orderService'
+import { orderService, ESTADOS_FILTRO_PEDIDOS, METODO_PAGO_LABEL } from '../../../services/orderService'
 import { sucursalService } from '../../../services/sucursalService'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
@@ -143,7 +143,9 @@ export default function OrdersPage() {
                     </div>
                   </td>
                   <td className="table-cell px-4 text-gray-500">{formatDate(order.creado_en)}</td>
-                  <td className="table-cell px-4 text-gray-500">-</td>
+                  <td className="table-cell px-4 text-gray-500">
+                    {order.metodo_pago ? (METODO_PAGO_LABEL[order.metodo_pago] ?? order.metodo_pago) : '—'}
+                  </td>
                   <td className="table-cell px-4 text-right font-bold text-black">{formatCurrency(order.total)}</td>
                   <td className="table-cell px-4 text-center">
                     <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>

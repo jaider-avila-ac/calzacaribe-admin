@@ -22,6 +22,22 @@ export const SIGUIENTE_PASO = {
 // Estados que acepta la corrección excepcional (saltar/retroceder con motivo obligatorio).
 export const ESTADOS_CORREGIBLES = ['pagado', 'preparando', 'enviado', 'entregado']
 
+// Espejo de PagoConfirmacionService.METODOS_VALIDOS (backend) — todo payment_method_type que
+// Wompi puede mandar en el webhook, más EFECTIVO (venta local) y OTRO (fallback). Compartido
+// entre OrdersPage (columna de la lista) y OrderDetailPage (detalle) para no duplicar el mapa.
+export const METODO_PAGO_LABEL = {
+  CARD: 'Tarjeta',
+  NEQUI: 'Nequi',
+  PSE: 'PSE',
+  BANCOLOMBIA_TRANSFER: 'Transferencia Bancolombia',
+  BANCOLOMBIA_QR: 'QR Bancolombia',
+  BANCOLOMBIA_COLLECT: 'Corresponsal Bancolombia',
+  BANCOLOMBIA_BNPL: 'Bancolombia a plazos',
+  DAVIPLATA: 'Daviplata',
+  EFECTIVO: 'Efectivo',
+  OTRO: 'Otro',
+}
+
 const BASE = '/pedidos'
 
 export const orderService = {
