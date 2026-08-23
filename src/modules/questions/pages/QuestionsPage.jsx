@@ -111,6 +111,7 @@ export default function QuestionsPage() {
                 <th className="table-header px-4 py-3 text-left">Cliente</th>
                 <th className="table-header px-4 py-3 text-left">Pregunta</th>
                 <th className="table-header px-4 py-3 text-left">Estado</th>
+                <th className="table-header px-4 py-3 text-left">Respondido por</th>
                 <th className="table-header px-4 py-3 text-left">Fecha</th>
               </tr>
             </thead>
@@ -129,6 +130,10 @@ export default function QuestionsPage() {
                       <Badge variant="warning">Pendiente</Badge>
                     )}
                     {p.editada && <span className="ml-1.5 text-[10px] text-gray-400">editada</span>}
+                  </td>
+                  <td className="table-cell px-4 text-gray-600">
+                    {p.respuesta_admin_nombre ?? '—'}
+                    {p.respuesta_editada && <span className="ml-1 text-[10px] text-gray-400">(editada)</span>}
                   </td>
                   <td className="table-cell px-4 text-gray-500">{formatDate(p.creado_en)}</td>
                 </tr>
