@@ -4,7 +4,7 @@ export const ventaLocalService = {
   quote: (items) => api.post('/ventas-locales/cotizacion', {
     items: items.map((i) => ({ prd_id: i.prdId, var_id: i.varId, cantidad: i.cantidad })),
   }),
-  create: ({ usrId, nombre, tipoDocumento, numeroDocumento, items, metodoPago, notas }) =>
+  create: ({ usrId, nombre, tipoDocumento, numeroDocumento, items, metodoPago, notas, idempotencyKey }) =>
     api.post('/ventas-locales', {
       usr_id: usrId,
       nombre,
@@ -13,5 +13,5 @@ export const ventaLocalService = {
       items: items.map((i) => ({ prd_id: i.prdId, var_id: i.varId, cantidad: i.cantidad })),
       metodo_pago: metodoPago,
       notas,
-    }),
+    }, { 'Idempotency-Key': idempotencyKey }),
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Trash2, Search, User, UserPlus, ShoppingBag } from 'lucide-react'
 import { customerService } from '../../../services/customerService'
@@ -99,7 +99,15 @@ export default function LocalSalePage() {
 
   const quitarItem = (idx) => setItems((prev) => prev.filter((_, i) => i !== idx))
 
+  // Mutex SINCRÓNICO (no useState, cuyo efecto no es inmediato en el siguiente render) más una
+  // clave que se genera UNA vez y se conserva entre reintentos: un doble tap en "Registrar venta"
+  // (muy común cuando la pantalla tarda un momento en responder) ya no crea dos pedidos, dos pagos
+  // aprobados ni descuenta el stock dos veces — ver IdempotenciaGuard en el backend.
+  const saleMutexRef = useRef(false)
+  const idempotencyKeyRef = useRef(null)
+
   const handleSubmit = async () => {
+    if (saleMutexRef.current) return
     setError('')
     if (items.length === 0) { setError('Agrega al menos un producto'); return }
     if (!quote.total || quote.total <= 0) { setError('El total de la venta debe ser mayor a $0'); return }
@@ -108,17 +116,22 @@ export default function LocalSalePage() {
       setError('Indica el nombre y el número de documento del cliente'); return
     }
 
+    saleMutexRef.current = true
     setSaving(true)
+    if (!idempotencyKeyRef.current) idempotencyKeyRef.current = crypto.randomUUID()
     try {
       const payload = clienteModo === 'existente'
-        ? { usrId: clienteSeleccionado.id, items, metodoPago, notas }
-        : { nombre: nombreNuevo, tipoDocumento: tipoDocumentoNuevo, numeroDocumento: numeroDocumentoNuevo, items, metodoPago, notas }
+        ? { usrId: clienteSeleccionado.id, items, metodoPago, notas, idempotencyKey: idempotencyKeyRef.current }
+        : { nombre: nombreNuevo, tipoDocumento: tipoDocumentoNuevo, numeroDocumento: numeroDocumentoNuevo, items, metodoPago, notas, idempotencyKey: idempotencyKeyRef.current }
       const result = await ventaLocalService.create(payload)
       navigate(`/pedidos/${result.pedido_id}`)
+      // No se libera el mutex ni se limpia la clave: la página está a punto de navegar fuera.
     } catch (err) {
       setError(err.message || 'No se pudo registrar la venta')
-    } finally {
       setSaving(false)
+      saleMutexRef.current = false
+      // La clave se conserva a propósito: un reintento tras un error debe reusarla, no generar
+      // una nueva, para que el backend lo reconozca como la misma intención de venta.
     }
   }
 
