@@ -194,13 +194,15 @@ export default function ReportsPage() {
           <div className="space-y-3">
             {[
               { label: 'Ingresos', valor: formatCurrency(resumen?.total_ingresos ?? 0) },
+              { label: 'Por productos', valor: formatCurrency(resumen?.ingresos_productos ?? 0), sub: true },
+              { label: 'Por envío cobrado', valor: formatCurrency(resumen?.ingresos_envio ?? 0), sub: true },
               { label: 'Pedidos',  valor: resumen?.total_pedidos ?? 0 },
               { label: 'Clientes nuevos', valor: resumen?.total_clientes ?? 0 },
-            ].map(({ label, valor }) => (
-              <div key={label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                <span className="text-sm text-gray-500">{label}</span>
+            ].map(({ label, valor, sub }) => (
+              <div key={label} className={`flex items-center justify-between border-b border-gray-50 last:border-0 ${sub ? 'py-1 pl-3' : 'py-2'}`}>
+                <span className={sub ? 'text-xs text-gray-400' : 'text-sm text-gray-500'}>{label}</span>
                 <div className="text-right">
-                  <p className="text-sm font-black text-black">{valor}</p>
+                  <p className={sub ? 'text-xs font-bold text-gray-500' : 'text-sm font-black text-black'}>{valor}</p>
                 </div>
               </div>
             ))}
