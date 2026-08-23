@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { Navigate } from 'react-router-dom'
 import { TrendingUp, ShoppingBag, Users } from 'lucide-react'
 import { reportService } from '../../../services/reportService'
 import { orderService } from '../../../services/orderService'
 import { sucursalService } from '../../../services/sucursalService'
+import { authService } from '../../../services/authService'
 import { formatCurrency } from '../../../utils/format'
 
 const ESTADO_LABEL = {
@@ -59,6 +61,15 @@ export default function ReportsPage() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [mes, colaboradorId, sucursalId])
+
+  // Esta página solo es para admin/superadmin (el link ya está escondido del menú para
+  // cualquier otro rol — ver Sidebar.jsx — pero eso no evita entrar escribiendo la URL
+  // directamente). Un colaborador ve sus propias cifras en el Dashboard, no acá: acá se puede
+  // filtrar por cualquier colaborador o consultar el total de la tienda, algo que un
+  // colaborador no debe poder hacer.
+  if (!['admin', 'superadmin'].includes(authService.getUser()?.rol)) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   if (loading) {
     return <div className="py-20 text-center text-sm text-gray-400">Cargando reportes…</div>

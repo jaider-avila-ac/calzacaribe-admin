@@ -4,6 +4,7 @@ import { ShoppingBag, Users, Package, DollarSign, AlertTriangle, ArrowRight, Tre
 import { reportService } from '../../../services/reportService'
 import { orderService } from '../../../services/orderService'
 import { api } from '../../../services/api'
+import { authService } from '../../../services/authService'
 import StatCard from '../../../components/ui/StatCard'
 import Badge from '../../../components/ui/Badge'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -54,6 +55,10 @@ export default function DashboardPage() {
   }
 
   const pendingCount = resumen?.pedidos_en_proceso ?? 0
+  // Un colaborador ve ingresos/pedidos por estado escalados a lo suyo (ver ReporteService.
+  // resumen — ya no se ocultan, se fuerzan al propio colaborador), nunca a la tienda completa —
+  // las etiquetas lo dejan claro para que no se lea como si fuera el total del negocio.
+  const esAdmin = ['admin', 'superadmin'].includes(authService.getUser()?.rol)
 
   return (
     <div className="space-y-6">
@@ -61,15 +66,15 @@ export default function DashboardPage() {
       <div className={`grid grid-cols-2 gap-4 ${resumen?.total_ingresos != null ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
         {resumen?.total_ingresos != null && (
           <StatCard
-            title="Ingresos del mes"
+            title={esAdmin ? 'Ingresos del mes' : 'Mis ingresos del mes'}
             value={formatCurrency(resumen.total_ingresos)}
-            subtitle="Pedidos entregados"
+            subtitle={esAdmin ? 'Pedidos entregados' : 'De tus pedidos gestionados'}
             icon={DollarSign}
-            to="/reportes"
+            to={esAdmin ? '/reportes' : undefined}
           />
         )}
         <StatCard
-          title="Pedidos del mes"
+          title={esAdmin ? 'Pedidos del mes' : 'Mis pedidos del mes'}
           value={resumen?.total_pedidos ?? 0}
           subtitle={`${pendingCount} en proceso`}
           icon={ShoppingBag}
@@ -158,7 +163,7 @@ export default function DashboardPage() {
       {/* Pedidos por estado */}
       <div className="section-card">
         <div className="px-5 py-4 border-b border-gray-50">
-          <h2 className="text-sm font-bold text-black">Pedidos por estado</h2>
+          <h2 className="text-sm font-bold text-black">{esAdmin ? 'Pedidos por estado' : 'Mis pedidos por estado'}</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-50">
           {/* "pagado" no se muestra: es un estado de tránsito tan corto (todo pedido pasa
