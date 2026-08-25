@@ -8,10 +8,12 @@ export const collaboratorService = {
       apellido, telefono,
       tipo_documento: tipoDocumento, numero_documento: numeroDocumento, fecha_nacimiento: fechaNacimiento,
     }),
-  update: (id, { nombre, sucursalId, apellido, telefono, tipoDocumento, numeroDocumento, fechaNacimiento }) =>
+  update: (id, { nombre, sucursalId, apellido, telefono, tipoDocumento, numeroDocumento, fechaNacimiento, password }) =>
     api.patch(`/admin-users/${id}`, {
       nombre, sucursal_id: sucursalId, apellido, telefono,
       tipo_documento: tipoDocumento, numero_documento: numeroDocumento, fecha_nacimiento: fechaNacimiento,
+      // vacío = no se toca (ver AdminUserService.actualizar)
+      password: password || null,
     }),
   setActivo: (id, activo) => api.patch(`/admin-users/${id}/activo`, { activo }),
 }

@@ -208,6 +208,11 @@ export default function CollaboratorsPage() {
             <p className="text-xs text-gray-400 mt-1">A esta tienda quedarán atribuidas las ventas que gestione.</p>
           </div>
 
+          {modal === 'edit' && (
+            <Input label="Nueva contraseña (opcional)" type="password" value={form.password} onChange={set('password')}
+              minLength={8} placeholder="Déjalo vacío para no cambiarla" />
+          )}
+
           {modal === 'create' && (
             <>
               <div>
