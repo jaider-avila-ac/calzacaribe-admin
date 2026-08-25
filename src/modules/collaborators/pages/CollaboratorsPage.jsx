@@ -31,6 +31,7 @@ function formFromItem(item) {
     apellido: item.apellido ?? '', telefono: item.telefono ?? '',
     tipoDocumento: item.tipo_documento ?? 'CC', numeroDocumento: item.numero_documento ?? '',
     fechaNacimiento: item.fecha_nacimiento ?? '',
+    emailActual: item.email ?? '', // solo para mostrar — el campo "usuario" vacío no lo toca
   }
 }
 
@@ -209,8 +210,25 @@ export default function CollaboratorsPage() {
           </div>
 
           {modal === 'edit' && (
-            <Input label="Nueva contraseña (opcional)" type="password" value={form.password} onChange={set('password')}
-              minLength={8} placeholder="Déjalo vacío para no cambiarla" />
+            <>
+              <div>
+                <label className="label-field">Usuario (opcional)</label>
+                <input
+                  className="input-field"
+                  value={form.usuario}
+                  onChange={set('usuario')}
+                  placeholder="Déjalo vacío para no cambiarlo"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Correo actual: <span className="font-semibold text-gray-600">{form.emailActual}</span>
+                  {form.usuario && (
+                    <> — nuevo: <span className="font-semibold text-gray-600">{form.usuario}@{dominio}</span></>
+                  )}
+                </p>
+              </div>
+              <Input label="Nueva contraseña (opcional)" type="password" value={form.password} onChange={set('password')}
+                minLength={8} placeholder="Déjalo vacío para no cambiarla" />
+            </>
           )}
 
           {modal === 'create' && (
