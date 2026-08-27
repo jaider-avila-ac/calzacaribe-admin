@@ -6,6 +6,7 @@ import { categoryService } from '../../../services/categoryService'
 import { productService } from '../../../services/productService'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
 import { formatCurrency } from '../../../utils/format'
 
 const PAGE_SIZE = 20
@@ -46,21 +47,43 @@ export default function ProductsPage() {
   // El admin tiene que ser consciente de que borrar el producto también borra sus reseñas y
   // preguntas (se van en cascada, a diferencia de los pedidos, que nunca se ven afectados) — se
   // consulta el impacto antes de confirmar en vez de avisar recién después de que ya se borró.
-  const handleDelete = async (id, nombre) => {
-    let advertencia = ''
+  const [deleteTarget, setDeleteTarget] = useState(null) // { id, nombre } | null
+  const [deleteWarning, setDeleteWarning] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  const handleDeleteClick = async (id, nombre) => {
+    setDeleteTarget({ id, nombre })
+    setDeleteError('')
+    setDeleteWarning('')
     try {
       const impacto = await productService.impactoEliminacion(id)
       const partes = []
       if (impacto?.resenas) partes.push(`${impacto.resenas} reseña${impacto.resenas === 1 ? '' : 's'}`)
       if (impacto?.preguntas) partes.push(`${impacto.preguntas} pregunta${impacto.preguntas === 1 ? '' : 's'}`)
       if (partes.length) {
-        advertencia = `\n\nEsto también borrará ${partes.join(' y ')} de este producto — esa información no se puede recuperar. Los pedidos ya hechos no se ven afectados.`
+        setDeleteWarning(`Esto también borrará ${partes.join(' y ')} de este producto — esa información no se puede recuperar. Los pedidos ya hechos no se ven afectados.`)
       }
     } catch {
       // Si no se pudo consultar el impacto, se sigue permitiendo borrar (no bloquear la acción
       // por un problema de red) pero sin la advertencia detallada.
     }
-    if (confirm(`¿Eliminar "${nombre}"?${advertencia}`)) remove(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await remove(deleteTarget.id)
+      setDeleteTarget(null)
+    } catch (err) {
+      // No se puede borrar por una razón real (ej. un problema del servidor) — se avisa en vez
+      // de fallar en silencio o dejar el modal colgado sin explicación.
+      setDeleteError(err.message || 'No se pudo eliminar el producto. Intenta de nuevo.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const from = totalElements === 0 ? 0 : page * PAGE_SIZE + 1
@@ -171,7 +194,7 @@ export default function ProductsPage() {
                           <Edit2 size={15} />
                         </button>
                         <button
-                          onClick={() => handleDelete(product.id, product.nombre)}
+                          onClick={() => handleDeleteClick(product.id, product.nombre)}
                           className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
                           title="Eliminar"
                         >
@@ -211,6 +234,19 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar producto"
+        message={deleteTarget && `¿Eliminar "${deleteTarget.nombre}"? Esta acción no se puede deshacer — si solo quieres quitarlo de la tienda sin perder su historial, puedes desactivarlo desde Editar en vez de borrarlo.`}
+        warning={deleteWarning}
+        error={deleteError}
+        confirmLabel="Eliminar"
+        danger
+        loading={deleting}
+      />
     </div>
   )
 }

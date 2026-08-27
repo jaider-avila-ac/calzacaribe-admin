@@ -232,6 +232,7 @@ export default function ReportsPage() {
               { label: 'Por productos', valor: formatCurrency(resumen?.ingresos_productos ?? 0), sub: true },
               { label: 'Por envío cobrado', valor: formatCurrency(resumen?.ingresos_envio ?? 0), sub: true },
               { label: 'Descuentos (venta local)', valor: formatCurrency(resumen?.total_descuentos ?? 0), sub: true },
+              { label: 'Pendiente por preparar', valor: formatCurrency(resumen?.ingresos_pendientes ?? 0) },
               { label: 'Pedidos',  valor: resumen?.total_pedidos ?? 0 },
               { label: 'Clientes nuevos', valor: resumen?.total_clientes ?? 0 },
             ].map(({ label, valor, sub }) => (

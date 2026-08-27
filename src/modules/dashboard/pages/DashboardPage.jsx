@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingBag, Users, Package, DollarSign, AlertTriangle, ArrowRight, TrendingUp } from 'lucide-react'
+import { ShoppingBag, Users, Package, DollarSign, AlertTriangle, ArrowRight, TrendingUp, Clock } from 'lucide-react'
 import { reportService } from '../../../services/reportService'
 import { orderService } from '../../../services/orderService'
 import { api } from '../../../services/api'
@@ -63,7 +63,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className={`grid grid-cols-2 gap-4 ${resumen?.total_ingresos != null ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+      <div className={`grid grid-cols-2 gap-4 ${resumen?.total_ingresos != null ? 'lg:grid-cols-5' : 'lg:grid-cols-3'}`}>
         {resumen?.total_ingresos != null && (
           <StatCard
             title={esAdmin ? 'Ingresos del mes' : 'Mis ingresos del mes'}
@@ -71,6 +71,15 @@ export default function DashboardPage() {
             subtitle={esAdmin ? 'Pedidos entregados' : 'De tus pedidos gestionados'}
             icon={DollarSign}
             to={esAdmin ? '/reportes' : undefined}
+          />
+        )}
+        {resumen?.ingresos_pendientes != null && (
+          <StatCard
+            title="Pendiente por preparar"
+            value={formatCurrency(resumen.ingresos_pendientes)}
+            subtitle="Ya pagado, aún no cuenta como ingreso"
+            icon={Clock}
+            to="/pedidos?estado=pagado"
           />
         )}
         <StatCard
