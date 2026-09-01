@@ -639,6 +639,7 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState(() => getTheme())
 
   const [envioModo, setEnvioModo] = useState('contra_entrega')
+  const [enviaAmbiente, setEnviaAmbiente] = useState('sandbox')
   const [envioGratisActivo, setEnvioGratisActivo] = useState(false)
   const [envioGratisDesde, setEnvioGratisDesde] = useState('')
   const [envioCosto, setEnvioCosto] = useState('')
@@ -649,7 +650,8 @@ export default function SettingsPage() {
   useEffect(() => {
     tiendaConfigService.get()
       .then((cfg) => {
-        setEnvioModo(cfg?.envio_modo === 'fijo' ? 'fijo' : 'contra_entrega')
+        setEnvioModo(['fijo', 'envia'].includes(cfg?.envio_modo) ? cfg.envio_modo : 'contra_entrega')
+        setEnviaAmbiente(cfg?.envia_ambiente === 'produccion' ? 'produccion' : 'sandbox')
         setEnvioGratisActivo(Boolean(cfg?.envio_gratis_activo))
         setEnvioGratisDesde(cfg?.envio_gratis_desde != null ? String(cfg.envio_gratis_desde) : '')
         setEnvioCosto(cfg?.envio_costo != null ? String(cfg.envio_costo) : '')
@@ -679,6 +681,7 @@ export default function SettingsPage() {
         envioCosto: Number(envioCosto) || 0,
         dominioStaff,
         emailNotificacionPedidos,
+        enviaAmbiente,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -831,11 +834,30 @@ export default function SettingsPage() {
               </button>
             </div>
             {envioModo === 'envia' && (
-              <p className="text-xs text-gray-400">
-                Requiere: todos los productos activos con un empaque asignado, al menos una
-                sucursal con dirección de origen, y las credenciales de Envia.com configuradas
-                (contacta al superadmin). Si algo falta, al guardar verás el error específico.
-              </p>
+              <div className="space-y-2">
+                <p className="text-xs text-gray-400">
+                  Requiere: todos los productos activos con un empaque asignado, al menos una
+                  sucursal con dirección de origen, y las credenciales de Envia.com configuradas
+                  (contacta al superadmin). Si algo falta, al guardar verás el error específico.
+                </p>
+                <div>
+                  <label className="label-field">Ambiente de Envia.com</label>
+                  <div className="flex gap-4 pt-1">
+                    <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                      <input type="radio" name="envia_ambiente" value="sandbox"
+                        checked={enviaAmbiente === 'sandbox'}
+                        onChange={() => setEnviaAmbiente('sandbox')} className="accent-black" />
+                      Sandbox (pruebas, no cobra dinero real)
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                      <input type="radio" name="envia_ambiente" value="produccion"
+                        checked={enviaAmbiente === 'produccion'}
+                        onChange={() => setEnviaAmbiente('produccion')} className="accent-black" />
+                      Producción (guías reales, cobra dinero real)
+                    </label>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 

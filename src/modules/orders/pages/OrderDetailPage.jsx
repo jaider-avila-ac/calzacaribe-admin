@@ -122,8 +122,16 @@ function EnvioRealSection({ order }) {
           <p className="text-xs text-green-700">
             {carrierLabel(resultado?.carrier ?? data.transportadora_actual)} — tracking {resultado?.tracking_number ?? data.codigo_rastreo_actual}
           </p>
-          {resultado?.total_price_cop != null && (
-            <p className="text-xs text-green-700">Costo real cobrado: {formatCurrency(resultado.total_price_cop)}</p>
+          {/* resultado (respuesta inmediata de generar-guia) trae el precio en pesos; el
+              costo persistido (data, tras recargar) viene en centavos como el resto de montos
+              de dinero de la API — ver order.reembolso.monto_centavos más abajo. */}
+          {(resultado?.total_price_cop != null || data?.costo_real_centavos_actual != null) && (
+            <p className="text-xs text-green-700">
+              Costo real cobrado: {formatCurrency(resultado?.total_price_cop ?? data.costo_real_centavos_actual / 100)}
+            </p>
+          )}
+          {(resultado?.shipment_id ?? data?.shipment_id_actual) && (
+            <p className="text-xs text-green-700">Shipment ID: {resultado?.shipment_id ?? data.shipment_id_actual}</p>
           )}
           {(resultado?.label_url ?? data.guia_url_actual) && (
             <a href={resultado?.label_url ?? data.guia_url_actual} target="_blank" rel="noopener noreferrer"
