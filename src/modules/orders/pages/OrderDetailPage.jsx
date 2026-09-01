@@ -4,6 +4,8 @@ import { ArrowLeft, MapPin, CreditCard, Package, Truck, AlertTriangle, Link2, Ba
 import { orderService, ESTADOS_PEDIDO, ESTADOS_CORREGIBLES, SIGUIENTE_PASO, MOTIVOS_CANCELACION, METODO_PAGO_LABEL } from '../../../services/orderService'
 import { reembolsoService } from '../../../services/reembolsoService'
 import { authService } from '../../../services/authService'
+import { tiendaConfigService } from '../../../services/tiendaConfigService'
+import { pedidoEnvioService } from '../../../services/pedidoEnvioService'
 import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -42,6 +44,127 @@ const MOSTRAR_OPCIONES = [
 
 const SEGUIMIENTO_VACIO = { transportadora: '', codigoRastreo: '', link: '', mostrar: 'ambos' }
 
+const CARRIER_LABELS = {
+  servientrega: 'Servientrega', coordinadora: 'Coordinadora',
+  interrapidisimo: 'Interrapidísimo', envia: 'Envía',
+}
+const carrierLabel = (carrier) => CARRIER_LABELS[carrier] ?? carrier
+
+/** Reemplaza el formulario manual de transportadora/tracking cuando la tienda cotiza y cobra
+ *  el envío real con Envia.com (envio_modo='envia') — PLAN_INTEGRACION_ENVIA.md, Fase 4. Las
+ *  tiendas en 'contra_entrega'/'fijo' nunca ven esto ni se ven afectadas por él. */
+function EnvioRealSection({ order }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [elegida, setElegida] = useState(null)
+  const [generando, setGenerando] = useState(false)
+  const [resultado, setResultado] = useState(null)
+
+  const cargar = () => {
+    setLoading(true)
+    setError('')
+    pedidoEnvioService.preparar(order.id)
+      .then(setData)
+      .catch((err) => setError(err.message || 'No se pudo preparar el envío'))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(cargar, [order.id])
+
+  const generar = async () => {
+    if (!elegida) return
+    if (!confirm(`¿Generar la guía real con ${carrierLabel(elegida.carrier)} — ${elegida.servicio_descripcion} por ${formatCurrency(elegida.precio_cop)}? Esto cobra de la cuenta de Envia de la tienda y no se puede deshacer.`)) return
+    setGenerando(true)
+    setError('')
+    try {
+      const guia = await pedidoEnvioService.generarGuia(order.id, {
+        carrier: elegida.carrier,
+        servicio: elegida.servicio_codigo,
+      })
+      setResultado(guia)
+    } catch (err) {
+      setError(err.message || 'Envia no pudo generar la guía')
+    } finally {
+      setGenerando(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="section-card p-5">
+        <p className="text-xs text-gray-400">Cargando cotizaciones de envío…</p>
+      </div>
+    )
+  }
+
+  const yaGenerada = Boolean(resultado || data?.guia_ya_generada)
+
+  return (
+    <div className="section-card p-5 space-y-3">
+      <h2 className="text-sm font-bold text-black flex items-center gap-1.5">
+        <Truck size={15} /> Envío real (Envia.com)
+      </h2>
+
+      {data?.paquetes?.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {data.paquetes.map((p, i) => (
+            <span key={i} className="text-[11px] bg-gray-50 border border-gray-100 px-2 py-1 text-gray-500">
+              {p.cantidad}× {p.empaque_nombre} ({p.largo_cm}×{p.ancho_cm}×{p.alto_cm} cm, {p.peso_gramos_por_unidad} g c/u)
+            </span>
+          ))}
+        </div>
+      )}
+
+      {yaGenerada ? (
+        <div className="bg-green-50 border-l-4 border-green-500 p-3 space-y-1">
+          <p className="text-sm font-bold text-green-700">Guía generada</p>
+          <p className="text-xs text-green-700">
+            {carrierLabel(resultado?.carrier ?? data.transportadora_actual)} — tracking {resultado?.tracking_number ?? data.codigo_rastreo_actual}
+          </p>
+          {resultado?.total_price_cop != null && (
+            <p className="text-xs text-green-700">Costo real cobrado: {formatCurrency(resultado.total_price_cop)}</p>
+          )}
+          {(resultado?.label_url ?? data.guia_url_actual) && (
+            <a href={resultado?.label_url ?? data.guia_url_actual} target="_blank" rel="noopener noreferrer"
+              className="text-xs text-admin-accent hover:underline inline-block mt-1">
+              Descargar guía (PDF) →
+            </a>
+          )}
+        </div>
+      ) : (
+        <>
+          {data?.cotizaciones?.length > 0 ? (
+            <div className="space-y-1.5">
+              {data.cotizaciones.map((c, i) => (
+                <label key={i} className={`flex items-center justify-between gap-3 p-2.5 border text-xs cursor-pointer ${
+                  elegida === c ? 'border-admin-accent bg-admin-accent/5' : 'border-gray-200'
+                }`}>
+                  <span className="flex items-center gap-2">
+                    <input type="radio" name="cotizacion" checked={elegida === c} onChange={() => setElegida(c)} className="accent-black" />
+                    <span>
+                      <span className="font-semibold text-black">{carrierLabel(c.carrier)}</span> — {c.servicio_descripcion}
+                      {c.tiempo_estimado && <span className="text-gray-400"> ({c.tiempo_estimado})</span>}
+                    </span>
+                  </span>
+                  <span className="font-bold text-black">{formatCurrency(c.precio_cop)}</span>
+                </label>
+              ))}
+              <button onClick={generar} disabled={!elegida || generando} className="btn-primary text-xs mt-2 disabled:opacity-50">
+                {generando ? 'Generando...' : 'Generar guía real (cobra ya)'}
+              </button>
+            </div>
+          ) : (
+            !error && <p className="text-xs text-gray-400">Ninguna transportadora respondió con una cotización para esta dirección.</p>
+          )}
+        </>
+      )}
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  )
+}
+
 export default function OrderDetailPage() {
   const { id }   = useParams()
   const navigate = useNavigate()
@@ -75,6 +198,15 @@ export default function OrderDetailPage() {
   const [colaboradores, setColaboradores] = useState([])
   const [tomando, setTomando] = useState(false)
   const [asignError, setAsignError] = useState('')
+
+  // Determina si esta tienda cotiza/cobra el envío real (Envia.com) o usa el flujo manual de
+  // siempre — las tiendas en 'contra_entrega'/'fijo' (ej. Calzacaribe) nunca ven el cambio.
+  const [envioModo, setEnvioModo] = useState(null)
+  useEffect(() => {
+    tiendaConfigService.get()
+      .then((cfg) => setEnvioModo(cfg?.envio_modo ?? 'contra_entrega'))
+      .catch(() => setEnvioModo('contra_entrega'))
+  }, [])
 
   const user = authService.getUser()
   const isAdmin = user?.rol === 'admin' || user?.rol === 'superadmin'
@@ -410,8 +542,11 @@ export default function OrderDetailPage() {
         </div>
       )}
 
-      {/* Seguimiento del envío (transportadora, código de rastreo y/o link) */}
-      {order.estado !== 'pendiente_pago' && (
+      {/* Seguimiento del envío — real (Envia.com) si la tienda cotiza envío real, manual si no */}
+      {order.estado !== 'pendiente_pago' && envioModo === 'envia' && (
+        <EnvioRealSection order={order} />
+      )}
+      {order.estado !== 'pendiente_pago' && envioModo !== null && envioModo !== 'envia' && (
         <div className="section-card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-black flex items-center gap-1.5">

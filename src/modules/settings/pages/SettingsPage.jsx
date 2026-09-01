@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Mail, Moon, Pencil, Plus, Save, Store, Sun, Phone, MapPin, Trash2, Undo2 } from 'lucide-react'
+import { CreditCard, Mail, Moon, Package, Pencil, Plus, Save, Store, Sun, Phone, MapPin, Trash2, Truck, Undo2 } from 'lucide-react'
 import Input from '../../../components/ui/Input'
 import { getTheme, setTheme as saveTheme } from '../../../services/themeService'
 import { tiendaConfigService } from '../../../services/tiendaConfigService'
 import { direccionDevolucionService } from '../../../services/direccionDevolucionService'
+import { empaqueService } from '../../../services/empaqueService'
+import { sucursalService } from '../../../services/sucursalService'
+import { transportadoraService } from '../../../services/transportadoraService'
 
 const DIRECCION_DEVOLUCION_VACIA = {
   nombre: '', direccion: '', complemento: '', departamento: '', municipio: '', barrio: '',
@@ -169,6 +172,453 @@ function DireccionDevolucionForm({ form, set, error, saving, onGuardar, onCancel
   )
 }
 
+const EMPAQUE_VACIO = {
+  nombre: '', largoCm: '', anchoCm: '', altoCm: '', pesoGramos: '', orden: '',
+}
+
+function EmpaquesSection() {
+  const [empaques, setEmpaques] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editando, setEditando] = useState(null) // id, o 'nueva'
+  const [form, setForm] = useState(EMPAQUE_VACIO)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    empaqueService.getAll()
+      .then((data) => setEmpaques(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(load, [])
+
+  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+
+  const iniciarEdicion = (emp) => {
+    setForm(emp ? {
+      nombre: emp.nombre,
+      largoCm: String(emp.largo_cm ?? ''),
+      anchoCm: String(emp.ancho_cm ?? ''),
+      altoCm: String(emp.alto_cm ?? ''),
+      pesoGramos: String(emp.peso_gramos ?? ''),
+      orden: String(emp.orden ?? ''),
+    } : EMPAQUE_VACIO)
+    setEditando(emp ? emp.id : 'nueva')
+    setError('')
+  }
+
+  const guardar = async () => {
+    if (!form.nombre.trim() || !form.largoCm || !form.anchoCm || !form.altoCm || !form.pesoGramos) {
+      setError('Nombre, dimensiones y peso son obligatorios')
+      return
+    }
+    setSaving(true)
+    setError('')
+    const payload = {
+      nombre: form.nombre.trim(),
+      largo_cm: Number(form.largoCm),
+      ancho_cm: Number(form.anchoCm),
+      alto_cm: Number(form.altoCm),
+      peso_gramos: Number(form.pesoGramos),
+      orden: form.orden ? Number(form.orden) : null,
+    }
+    try {
+      if (editando === 'nueva') {
+        await empaqueService.create(payload)
+      } else {
+        await empaqueService.update(editando, payload)
+      }
+      setEditando(null)
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleActivo = async (emp) => {
+    try {
+      await empaqueService.update(emp.id, { activo: !emp.activo })
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar')
+    }
+  }
+
+  const eliminar = async (id) => {
+    if (!confirm('¿Eliminar este empaque? Si algún producto lo tiene asignado, tendrás que asignarle otro.')) return
+    try {
+      await empaqueService.remove(id)
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar')
+    }
+  }
+
+  return (
+    <div className="section-card p-6 space-y-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2">
+          <Package size={16} className="text-gray-500" />
+          <h2 className="text-sm font-bold text-black">Empaques (cajas)</h2>
+        </div>
+        {editando === null && (
+          <button type="button" onClick={() => iniciarEdicion(null)} className="btn-secondary text-xs">
+            <Plus size={13} /> Agregar
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 -mt-2">
+        Las cajas o bolsas que usas para empacar. Cada producto debe tener un empaque asignado para
+        que la tienda pueda cotizar el envío real (Envia.com) — configúralo desde el formulario del producto.
+      </p>
+
+      {loading ? (
+        <p className="text-xs text-gray-400">Cargando...</p>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {empaques.map((emp) => (
+            <div key={emp.id} className="py-3">
+              {editando === emp.id ? (
+                <EmpaqueForm form={form} set={set} error={error} saving={saving}
+                  onGuardar={guardar} onCancelar={() => setEditando(null)} />
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className={emp.activo ? '' : 'opacity-50'}>
+                    <p className="text-sm font-semibold text-black">{emp.nombre}</p>
+                    <p className="text-xs text-gray-500">
+                      {emp.largo_cm} × {emp.ancho_cm} × {emp.alto_cm} cm — {emp.peso_gramos} g
+                    </p>
+                    {!emp.activo && <p className="text-xs text-red-500 mt-0.5">Inactivo</p>}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button type="button" onClick={() => toggleActivo(emp)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title={emp.activo ? 'Desactivar' : 'Activar'}>
+                      <Undo2 size={14} />
+                    </button>
+                    <button type="button" onClick={() => iniciarEdicion(emp)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title="Editar">
+                      <Pencil size={14} />
+                    </button>
+                    <button type="button" onClick={() => eliminar(emp.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Eliminar">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {editando === 'nueva' && (
+            <div className="py-3">
+              <EmpaqueForm form={form} set={set} error={error} saving={saving}
+                onGuardar={guardar} onCancelar={() => setEditando(null)} />
+            </div>
+          )}
+          {empaques.length === 0 && editando === null && (
+            <p className="text-xs text-gray-400 py-2">Aún no has agregado ningún empaque.</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EmpaqueForm({ form, set, error, saving, onGuardar, onCancelar }) {
+  return (
+    <div className="space-y-3 bg-gray-50 p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Nombre (ej. Caja mediana)" value={form.nombre} onChange={set('nombre')} />
+        <Input label="Orden (opcional, menor = primero)" type="number" value={form.orden} onChange={set('orden')} />
+        <Input label="Largo (cm)" type="number" value={form.largoCm} onChange={set('largoCm')} />
+        <Input label="Ancho (cm)" type="number" value={form.anchoCm} onChange={set('anchoCm')} />
+        <Input label="Alto (cm)" type="number" value={form.altoCm} onChange={set('altoCm')} />
+        <Input label="Peso de la caja vacía (gramos)" type="number" value={form.pesoGramos} onChange={set('pesoGramos')} />
+      </div>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={onGuardar} disabled={saving} className="btn-primary text-xs">
+          {saving ? 'Guardando...' : 'Guardar'}
+        </button>
+        <button type="button" onClick={onCancelar} className="text-xs text-gray-400 hover:text-black">Cancelar</button>
+      </div>
+    </div>
+  )
+}
+
+const CARRIERS_INFO = [
+  { value: 'servientrega', label: 'Servientrega' },
+  { value: 'coordinadora', label: 'Coordinadora' },
+  { value: 'interrapidisimo', label: 'Interrapidísimo' },
+  { value: 'envia', label: 'Envía' },
+]
+const carrierLabel = (carrier) => CARRIERS_INFO.find((c) => c.value === carrier)?.label ?? carrier
+
+function TransportadorasSection() {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [agregando, setAgregando] = useState(false)
+  const [nuevoCarrier, setNuevoCarrier] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    transportadoraService.getAll()
+      .then((data) => setItems(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(load, [])
+
+  const disponibles = CARRIERS_INFO.filter((c) => !items.some((i) => i.carrier === c.value))
+
+  const agregar = async () => {
+    if (!nuevoCarrier) return
+    setSaving(true)
+    setError('')
+    try {
+      const maxOrden = Math.max(0, ...items.map((i) => i.orden ?? 0))
+      await transportadoraService.create({ carrier: nuevoCarrier, orden: maxOrden + 1 })
+      setAgregando(false)
+      setNuevoCarrier('')
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo agregar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const cambiarOrden = async (item, orden) => {
+    try {
+      await transportadoraService.update(item.id, { orden: Number(orden) })
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar el orden')
+    }
+  }
+
+  const toggleActivo = async (item) => {
+    try {
+      await transportadoraService.update(item.id, { activo: !item.activo })
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar')
+    }
+  }
+
+  const eliminar = async (id) => {
+    if (!confirm('¿Quitar esta transportadora de la lista?')) return
+    try {
+      await transportadoraService.remove(id)
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar')
+    }
+  }
+
+  return (
+    <div className="section-card p-6 space-y-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2">
+          <Truck size={16} className="text-gray-500" />
+          <h2 className="text-sm font-bold text-black">Orden de transportadoras</h2>
+        </div>
+        {!agregando && disponibles.length > 0 && (
+          <button type="button" onClick={() => setAgregando(true)} className="btn-secondary text-xs">
+            <Plus size={13} /> Agregar
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 -mt-2">
+        Al cotizar con Envia.com, si varias transportadoras devuelven un precio similar se
+        prefiere la de menor número de orden. Actívalas y ordénalas según lo que prefieras.
+      </p>
+
+      {loading ? (
+        <p className="text-xs text-gray-400">Cargando...</p>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {items.map((item) => (
+            <div key={item.id} className="py-3 flex items-center justify-between gap-3">
+              <div className={item.activo ? '' : 'opacity-50'}>
+                <p className="text-sm font-semibold text-black">{carrierLabel(item.carrier)}</p>
+                {!item.activo && <p className="text-xs text-red-500 mt-0.5">Inactiva</p>}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <input type="number" defaultValue={item.orden} min={0}
+                  onBlur={(e) => e.target.value !== String(item.orden) && cambiarOrden(item, e.target.value)}
+                  className="input-field w-16 text-sm text-center" title="Orden" />
+                <button type="button" onClick={() => toggleActivo(item)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title={item.activo ? 'Desactivar' : 'Activar'}>
+                  <Undo2 size={14} />
+                </button>
+                <button type="button" onClick={() => eliminar(item.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Quitar">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+          {agregando && (
+            <div className="py-3 space-y-3">
+              <select value={nuevoCarrier} onChange={(e) => setNuevoCarrier(e.target.value)} className="input-field bg-white text-sm">
+                <option value="">Seleccionar transportadora...</option>
+                {disponibles.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={agregar} disabled={saving || !nuevoCarrier} className="btn-primary text-xs">
+                  {saving ? 'Agregando...' : 'Agregar'}
+                </button>
+                <button type="button" onClick={() => { setAgregando(false); setNuevoCarrier(''); setError('') }} className="text-xs text-gray-400 hover:text-black">Cancelar</button>
+              </div>
+            </div>
+          )}
+          {items.length === 0 && !agregando && (
+            <p className="text-xs text-gray-400 py-2">Sin transportadoras configuradas — se usará un orden por defecto.</p>
+          )}
+        </div>
+      )}
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  )
+}
+
+const SUCURSAL_ORIGEN_VACIO = {
+  nombre: '', whatsapp: '',
+  envioOrigenNombre: '', envioOrigenTelefono: '', envioOrigenDireccion: '', envioOrigenComplemento: '',
+  envioOrigenDepartamento: '', envioOrigenMunicipio: '', envioOrigenCodigoPostal: '',
+}
+
+function SucursalesSection() {
+  const [sucursales, setSucursales] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editando, setEditando] = useState(null) // id
+  const [form, setForm] = useState(SUCURSAL_ORIGEN_VACIO)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    sucursalService.list()
+      .then((data) => setSucursales(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(load, [])
+
+  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+
+  const iniciarEdicion = (s) => {
+    setForm({
+      nombre: s.nombre ?? '',
+      whatsapp: s.whatsapp ?? '',
+      envioOrigenNombre: s.envio_origen_nombre ?? '',
+      envioOrigenTelefono: s.envio_origen_telefono ?? '',
+      envioOrigenDireccion: s.envio_origen_direccion ?? '',
+      envioOrigenComplemento: s.envio_origen_complemento ?? '',
+      envioOrigenDepartamento: s.envio_origen_departamento ?? '',
+      envioOrigenMunicipio: s.envio_origen_municipio ?? '',
+      envioOrigenCodigoPostal: s.envio_origen_codigo_postal ?? '',
+    })
+    setEditando(s.id)
+    setError('')
+  }
+
+  const guardar = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      await sucursalService.update(editando, {
+        nombre: form.nombre.trim() || null,
+        whatsapp: form.whatsapp,
+        envio_origen_nombre: form.envioOrigenNombre,
+        envio_origen_telefono: form.envioOrigenTelefono,
+        envio_origen_direccion: form.envioOrigenDireccion,
+        envio_origen_complemento: form.envioOrigenComplemento,
+        envio_origen_departamento: form.envioOrigenDepartamento,
+        envio_origen_municipio: form.envioOrigenMunicipio,
+        envio_origen_codigo_postal: form.envioOrigenCodigoPostal,
+      })
+      setEditando(null)
+      load()
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="section-card p-6 space-y-4">
+      <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+        <Store size={16} className="text-gray-500" />
+        <h2 className="text-sm font-bold text-black">Sucursales</h2>
+      </div>
+      <p className="text-xs text-gray-400 -mt-2">
+        Dirección de origen desde la que se recoge cada envío real (Envia.com). Crear una
+        sucursal nueva es exclusivo del superadmin — aquí solo editas las que ya existen.
+      </p>
+
+      {loading ? (
+        <p className="text-xs text-gray-400">Cargando...</p>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {sucursales.map((s) => (
+            <div key={s.id} className="py-3">
+              {editando === s.id ? (
+                <div className="space-y-3 bg-gray-50 p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input label="Nombre de la sucursal" value={form.nombre} onChange={set('nombre')} />
+                    <Input label="WhatsApp (opcional)" value={form.whatsapp} onChange={set('whatsapp')} />
+                  </div>
+                  <p className="text-xs font-bold text-black pt-2 border-t border-gray-100">Origen para envío real</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input label="Nombre de contacto" value={form.envioOrigenNombre} onChange={set('envioOrigenNombre')} />
+                    <Input label="Teléfono de contacto" value={form.envioOrigenTelefono} onChange={set('envioOrigenTelefono')} />
+                    <Input label="Dirección" value={form.envioOrigenDireccion} onChange={set('envioOrigenDireccion')} />
+                    <Input label="Complemento (opcional)" value={form.envioOrigenComplemento} onChange={set('envioOrigenComplemento')} />
+                    <Input label="Departamento" value={form.envioOrigenDepartamento} onChange={set('envioOrigenDepartamento')} />
+                    <Input label="Municipio" value={form.envioOrigenMunicipio} onChange={set('envioOrigenMunicipio')} />
+                    <Input label="Código postal" value={form.envioOrigenCodigoPostal} onChange={set('envioOrigenCodigoPostal')} />
+                  </div>
+                  {error && <p className="text-xs text-red-500">{error}</p>}
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={guardar} disabled={saving} className="btn-primary text-xs">
+                      {saving ? 'Guardando...' : 'Guardar'}
+                    </button>
+                    <button type="button" onClick={() => setEditando(null)} className="text-xs text-gray-400 hover:text-black">Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-black">{s.nombre}</p>
+                    {s.envio_origen_direccion ? (
+                      <p className="text-xs text-gray-500">
+                        {s.envio_origen_direccion}, {[s.envio_origen_municipio, s.envio_origen_departamento].filter(Boolean).join(', ')}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-600 mt-0.5">Sin dirección de origen — no se podrá cotizar envío real desde aquí</p>
+                    )}
+                  </div>
+                  <button type="button" onClick={() => iniciarEdicion(s)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black flex-shrink-0" title="Editar">
+                    <Pencil size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          {sucursales.length === 0 && (
+            <p className="text-xs text-gray-400 py-2">No hay sucursales configuradas.</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const INITIAL = {
   nombre: 'Calzacaribe',
   nit: '900.123.456-7',
@@ -232,8 +682,8 @@ export default function SettingsPage() {
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
-    } catch {
-      setError('No se pudo guardar. Intenta de nuevo.')
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar. Intenta de nuevo.')
     } finally {
       setSaving(false)
     }
@@ -315,6 +765,12 @@ export default function SettingsPage() {
 
         <DireccionesDevolucionSection />
 
+        <EmpaquesSection />
+
+        <SucursalesSection />
+
+        <TransportadorasSection />
+
         {/* Envíos y pagos */}
         <div className="section-card p-6 space-y-4">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
@@ -339,7 +795,7 @@ export default function SettingsPage() {
                 que la tienda sí cobre un costo fijo.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setEnvioModo('contra_entrega')}
@@ -362,7 +818,25 @@ export default function SettingsPage() {
                 <p className="font-bold text-black">Costo fijo</p>
                 <p className="text-gray-500 mt-0.5">La tienda cobra un costo de envío controlado por ti.</p>
               </button>
+              <button
+                type="button"
+                onClick={() => setEnvioModo('envia')}
+                disabled={!envioConfigLoaded}
+                className={`text-left p-3 border text-xs disabled:opacity-50 ${
+                  envioModo === 'envia' ? 'border-admin-accent bg-admin-accent/5' : 'border-gray-200'
+                }`}
+              >
+                <p className="font-bold text-black">Envío real (Envia.com)</p>
+                <p className="text-gray-500 mt-0.5">Se cotiza y cobra el costo real de la transportadora en el checkout.</p>
+              </button>
             </div>
+            {envioModo === 'envia' && (
+              <p className="text-xs text-gray-400">
+                Requiere: todos los productos activos con un empaque asignado, al menos una
+                sucursal con dirección de origen, y las credenciales de Envia.com configuradas
+                (contacta al superadmin). Si algo falta, al guardar verás el error específico.
+              </p>
+            )}
           </div>
 
           <div className={`pt-2 border-t border-gray-100 space-y-4 ${envioModo !== 'fijo' ? 'opacity-50' : ''}`}>
