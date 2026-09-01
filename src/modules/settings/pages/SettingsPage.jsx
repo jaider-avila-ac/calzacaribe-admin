@@ -274,7 +274,9 @@ function EmpaquesSection({ isAdmin }) {
       </div>
       <p className="text-xs text-gray-400 -mt-2">
         Las cajas o bolsas que usas para empacar. Cada producto debe tener un empaque asignado para
-        que la tienda pueda cotizar el envío real (Envia.com) — configúralo desde el formulario del producto.
+        que la tienda pueda cotizar el envío real (Envia.com) — configúralo desde el formulario del
+        producto. El peso y las medidas son las del paquete YA armado (caja + lo que va adentro),
+        no las de la caja sola — eso es justo lo que se le manda a la transportadora.
         {!isAdmin && ' Solo el administrador puede crear, editar o eliminar empaques.'}
       </p>
 
@@ -337,7 +339,7 @@ function EmpaqueForm({ form, set, error, saving, onGuardar, onCancelar }) {
         <Input label="Largo (cm)" type="number" value={form.largoCm} onChange={set('largoCm')} />
         <Input label="Ancho (cm)" type="number" value={form.anchoCm} onChange={set('anchoCm')} />
         <Input label="Alto (cm)" type="number" value={form.altoCm} onChange={set('altoCm')} />
-        <Input label="Peso de la caja vacía (gramos)" type="number" value={form.pesoGramos} onChange={set('pesoGramos')} />
+        <Input label="Peso total ya empacado (gramos)" type="number" value={form.pesoGramos} onChange={set('pesoGramos')} />
       </div>
       {error && <p className="text-xs text-red-500">{error}</p>}
       <div className="flex items-center gap-2">
