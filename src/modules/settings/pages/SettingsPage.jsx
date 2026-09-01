@@ -7,6 +7,7 @@ import { direccionDevolucionService } from '../../../services/direccionDevolucio
 import { empaqueService } from '../../../services/empaqueService'
 import { sucursalService } from '../../../services/sucursalService'
 import { transportadoraService } from '../../../services/transportadoraService'
+import { authService } from '../../../services/authService'
 
 const DIRECCION_DEVOLUCION_VACIA = {
   nombre: '', direccion: '', complemento: '', departamento: '', municipio: '', barrio: '',
@@ -176,7 +177,7 @@ const EMPAQUE_VACIO = {
   nombre: '', largoCm: '', anchoCm: '', altoCm: '', pesoGramos: '', orden: '',
 }
 
-function EmpaquesSection() {
+function EmpaquesSection({ isAdmin }) {
   const [empaques, setEmpaques] = useState([])
   const [loading, setLoading] = useState(true)
   const [editando, setEditando] = useState(null) // id, o 'nueva'
@@ -265,7 +266,7 @@ function EmpaquesSection() {
           <Package size={16} className="text-gray-500" />
           <h2 className="text-sm font-bold text-black">Empaques (cajas)</h2>
         </div>
-        {editando === null && (
+        {isAdmin && editando === null && (
           <button type="button" onClick={() => iniciarEdicion(null)} className="btn-secondary text-xs">
             <Plus size={13} /> Agregar
           </button>
@@ -274,6 +275,7 @@ function EmpaquesSection() {
       <p className="text-xs text-gray-400 -mt-2">
         Las cajas o bolsas que usas para empacar. Cada producto debe tener un empaque asignado para
         que la tienda pueda cotizar el envío real (Envia.com) — configúralo desde el formulario del producto.
+        {!isAdmin && ' Solo el administrador puede crear, editar o eliminar empaques.'}
       </p>
 
       {loading ? (
@@ -282,7 +284,7 @@ function EmpaquesSection() {
         <div className="divide-y divide-gray-50">
           {empaques.map((emp) => (
             <div key={emp.id} className="py-3">
-              {editando === emp.id ? (
+              {isAdmin && editando === emp.id ? (
                 <EmpaqueForm form={form} set={set} error={error} saving={saving}
                   onGuardar={guardar} onCancelar={() => setEditando(null)} />
               ) : (
@@ -294,22 +296,24 @@ function EmpaquesSection() {
                     </p>
                     {!emp.activo && <p className="text-xs text-red-500 mt-0.5">Inactivo</p>}
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button type="button" onClick={() => toggleActivo(emp)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title={emp.activo ? 'Desactivar' : 'Activar'}>
-                      <Undo2 size={14} />
-                    </button>
-                    <button type="button" onClick={() => iniciarEdicion(emp)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title="Editar">
-                      <Pencil size={14} />
-                    </button>
-                    <button type="button" onClick={() => eliminar(emp.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Eliminar">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button type="button" onClick={() => toggleActivo(emp)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title={emp.activo ? 'Desactivar' : 'Activar'}>
+                        <Undo2 size={14} />
+                      </button>
+                      <button type="button" onClick={() => iniciarEdicion(emp)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title="Editar">
+                        <Pencil size={14} />
+                      </button>
+                      <button type="button" onClick={() => eliminar(emp.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Eliminar">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
-          {editando === 'nueva' && (
+          {isAdmin && editando === 'nueva' && (
             <div className="py-3">
               <EmpaqueForm form={form} set={set} error={error} saving={saving}
                 onGuardar={guardar} onCancelar={() => setEditando(null)} />
@@ -354,7 +358,7 @@ const CARRIERS_INFO = [
 ]
 const carrierLabel = (carrier) => CARRIERS_INFO.find((c) => c.value === carrier)?.label ?? carrier
 
-function TransportadorasSection() {
+function TransportadorasSection({ isAdmin }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -426,7 +430,7 @@ function TransportadorasSection() {
           <Truck size={16} className="text-gray-500" />
           <h2 className="text-sm font-bold text-black">Orden de transportadoras</h2>
         </div>
-        {!agregando && disponibles.length > 0 && (
+        {isAdmin && !agregando && disponibles.length > 0 && (
           <button type="button" onClick={() => setAgregando(true)} className="btn-secondary text-xs">
             <Plus size={13} /> Agregar
           </button>
@@ -435,6 +439,7 @@ function TransportadorasSection() {
       <p className="text-xs text-gray-400 -mt-2">
         Al cotizar con Envia.com, si varias transportadoras devuelven un precio similar se
         prefiere la de menor número de orden. Actívalas y ordénalas según lo que prefieras.
+        {!isAdmin && ' Solo el administrador puede editarlas.'}
       </p>
 
       {loading ? (
@@ -447,20 +452,24 @@ function TransportadorasSection() {
                 <p className="text-sm font-semibold text-black">{carrierLabel(item.carrier)}</p>
                 {!item.activo && <p className="text-xs text-red-500 mt-0.5">Inactiva</p>}
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <input type="number" defaultValue={item.orden} min={0}
-                  onBlur={(e) => e.target.value !== String(item.orden) && cambiarOrden(item, e.target.value)}
-                  className="input-field w-16 text-sm text-center" title="Orden" />
-                <button type="button" onClick={() => toggleActivo(item)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title={item.activo ? 'Desactivar' : 'Activar'}>
-                  <Undo2 size={14} />
-                </button>
-                <button type="button" onClick={() => eliminar(item.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Quitar">
-                  <Trash2 size={14} />
-                </button>
-              </div>
+              {isAdmin ? (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <input type="number" defaultValue={item.orden} min={0}
+                    onBlur={(e) => e.target.value !== String(item.orden) && cambiarOrden(item, e.target.value)}
+                    className="input-field w-16 text-sm text-center" title="Orden" />
+                  <button type="button" onClick={() => toggleActivo(item)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title={item.activo ? 'Desactivar' : 'Activar'}>
+                    <Undo2 size={14} />
+                  </button>
+                  <button type="button" onClick={() => eliminar(item.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Quitar">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ) : (
+                <span className="text-xs text-gray-400 flex-shrink-0">Orden: {item.orden}</span>
+              )}
             </div>
           ))}
-          {agregando && (
+          {isAdmin && agregando && (
             <div className="py-3 space-y-3">
               <select value={nuevoCarrier} onChange={(e) => setNuevoCarrier(e.target.value)} className="input-field bg-white text-sm">
                 <option value="">Seleccionar transportadora...</option>
@@ -490,7 +499,7 @@ const SUCURSAL_ORIGEN_VACIO = {
   envioOrigenDepartamento: '', envioOrigenMunicipio: '', envioOrigenCodigoPostal: '',
 }
 
-function SucursalesSection() {
+function SucursalesSection({ isAdmin }) {
   const [sucursales, setSucursales] = useState([])
   const [loading, setLoading] = useState(true)
   const [editando, setEditando] = useState(null) // id
@@ -559,6 +568,7 @@ function SucursalesSection() {
       <p className="text-xs text-gray-400 -mt-2">
         Dirección de origen desde la que se recoge cada envío real (Envia.com). Crear una
         sucursal nueva es exclusivo del superadmin — aquí solo editas las que ya existen.
+        {!isAdmin && ' Solo el administrador puede editarlas.'}
       </p>
 
       {loading ? (
@@ -567,7 +577,7 @@ function SucursalesSection() {
         <div className="divide-y divide-gray-50">
           {sucursales.map((s) => (
             <div key={s.id} className="py-3">
-              {editando === s.id ? (
+              {isAdmin && editando === s.id ? (
                 <div className="space-y-3 bg-gray-50 p-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Input label="Nombre de la sucursal" value={form.nombre} onChange={set('nombre')} />
@@ -603,9 +613,11 @@ function SucursalesSection() {
                       <p className="text-xs text-amber-600 mt-0.5">Sin dirección de origen — no se podrá cotizar envío real desde aquí</p>
                     )}
                   </div>
-                  <button type="button" onClick={() => iniciarEdicion(s)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black flex-shrink-0" title="Editar">
-                    <Pencil size={14} />
-                  </button>
+                  {isAdmin && (
+                    <button type="button" onClick={() => iniciarEdicion(s)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black flex-shrink-0" title="Editar">
+                      <Pencil size={14} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -637,6 +649,12 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => getTheme())
+
+  // PATCH /tienda/config (este formulario) y las escrituras de empaques/sucursales/
+  // transportadoras son exclusivas de ADMIN — un COLABORADOR/BODEGA solo puede ver los valores
+  // actuales (corrección de auditoría, 2026-09-01: antes se dejaban intentar y el backend ya
+  // las rechazaba con 403, pero el panel no lo explicaba).
+  const isAdmin = authService.getUser()?.rol === 'admin'
 
   const [envioModo, setEnvioModo] = useState('contra_entrega')
   const [enviaAmbiente, setEnviaAmbiente] = useState('sandbox')
@@ -671,6 +689,7 @@ export default function SettingsPage() {
 
   const handleSave = async (e) => {
     e.preventDefault()
+    if (!isAdmin) return
     setError('')
     setSaving(true)
     try {
@@ -768,11 +787,11 @@ export default function SettingsPage() {
 
         <DireccionesDevolucionSection />
 
-        <EmpaquesSection />
+        <EmpaquesSection isAdmin={isAdmin} />
 
-        <SucursalesSection />
+        <SucursalesSection isAdmin={isAdmin} />
 
-        <TransportadorasSection />
+        <TransportadorasSection isAdmin={isAdmin} />
 
         {/* Envíos y pagos */}
         <div className="section-card p-6 space-y-4">
@@ -935,8 +954,11 @@ export default function SettingsPage() {
 
         {/* Save */}
         <div className="flex items-center justify-end gap-3">
+          {!isAdmin && (
+            <p className="text-xs text-gray-400">Solo el administrador puede guardar esta configuración.</p>
+          )}
           {error && <p className="text-xs text-red-500">{error}</p>}
-          <button type="submit" disabled={saving} className={`btn-primary ${saved ? 'bg-admin-accent hover:bg-admin-accent-hover text-admin-accent-contrast' : ''}`}>
+          <button type="submit" disabled={saving || !isAdmin} className={`btn-primary ${saved ? 'bg-admin-accent hover:bg-admin-accent-hover text-admin-accent-contrast' : ''}`}>
             <Save size={15} />
             {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar cambios'}
           </button>

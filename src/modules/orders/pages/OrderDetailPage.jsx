@@ -53,7 +53,7 @@ const carrierLabel = (carrier) => CARRIER_LABELS[carrier] ?? carrier
 /** Reemplaza el formulario manual de transportadora/tracking cuando la tienda cotiza y cobra
  *  el envío real con Envia.com (envio_modo='envia') — PLAN_INTEGRACION_ENVIA.md, Fase 4. Las
  *  tiendas en 'contra_entrega'/'fijo' nunca ven esto ni se ven afectadas por él. */
-function EnvioRealSection({ order }) {
+function EnvioRealSection({ order, isAdmin }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -73,7 +73,7 @@ function EnvioRealSection({ order }) {
   useEffect(cargar, [order.id])
 
   const generar = async () => {
-    if (!elegida) return
+    if (!isAdmin || !elegida) return
     if (!confirm(`¿Generar la guía real con ${carrierLabel(elegida.carrier)} — ${elegida.servicio_descripcion} por ${formatCurrency(elegida.precio_cop)}? Esto cobra de la cuenta de Envia de la tienda y no se puede deshacer.`)) return
     setGenerando(true)
     setError('')
@@ -145,11 +145,13 @@ function EnvioRealSection({ order }) {
           {data?.cotizaciones?.length > 0 ? (
             <div className="space-y-1.5">
               {data.cotizaciones.map((c, i) => (
-                <label key={i} className={`flex items-center justify-between gap-3 p-2.5 border text-xs cursor-pointer ${
+                <label key={i} className={`flex items-center justify-between gap-3 p-2.5 border text-xs ${isAdmin ? 'cursor-pointer' : ''} ${
                   elegida === c ? 'border-admin-accent bg-admin-accent/5' : 'border-gray-200'
                 }`}>
                   <span className="flex items-center gap-2">
-                    <input type="radio" name="cotizacion" checked={elegida === c} onChange={() => setElegida(c)} className="accent-black" />
+                    {isAdmin && (
+                      <input type="radio" name="cotizacion" checked={elegida === c} onChange={() => setElegida(c)} className="accent-black" />
+                    )}
                     <span>
                       <span className="font-semibold text-black">{carrierLabel(c.carrier)}</span> — {c.servicio_descripcion}
                       {c.tiempo_estimado && <span className="text-gray-400"> ({c.tiempo_estimado})</span>}
@@ -158,9 +160,13 @@ function EnvioRealSection({ order }) {
                   <span className="font-bold text-black">{formatCurrency(c.precio_cop)}</span>
                 </label>
               ))}
-              <button onClick={generar} disabled={!elegida || generando} className="btn-primary text-xs mt-2 disabled:opacity-50">
-                {generando ? 'Generando...' : 'Generar guía real (cobra ya)'}
-              </button>
+              {isAdmin ? (
+                <button onClick={generar} disabled={!elegida || generando} className="btn-primary text-xs mt-2 disabled:opacity-50">
+                  {generando ? 'Generando...' : 'Generar guía real (cobra ya)'}
+                </button>
+              ) : (
+                <p className="text-xs text-gray-400 mt-2">Solo el administrador puede generar la guía real.</p>
+              )}
             </div>
           ) : (
             !error && <p className="text-xs text-gray-400">Ninguna transportadora respondió con una cotización para esta dirección.</p>
@@ -552,7 +558,7 @@ export default function OrderDetailPage() {
 
       {/* Seguimiento del envío — real (Envia.com) si la tienda cotiza envío real, manual si no */}
       {order.estado !== 'pendiente_pago' && envioModo === 'envia' && (
-        <EnvioRealSection order={order} />
+        <EnvioRealSection order={order} isAdmin={isAdmin} />
       )}
       {order.estado !== 'pendiente_pago' && envioModo !== null && envioModo !== 'envia' && (
         <div className="section-card p-5 space-y-3">
