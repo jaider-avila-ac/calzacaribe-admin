@@ -789,11 +789,18 @@ export default function SettingsPage() {
 
         <DireccionesDevolucionSection />
 
-        <EmpaquesSection isAdmin={isAdmin} />
+        {/* Empaques/sucursales-origen/transportadoras solo son relevantes cuando el envío real
+            (Envia.com) está activo — con envio_modo='contra_entrega'/'fijo' no aplican, y
+            mostrarlas confundía pidiendo datos (ej. dirección de sucursal) que no hacen falta. */}
+        {envioModo === 'envia' && (
+          <>
+            <EmpaquesSection isAdmin={isAdmin} />
 
-        <SucursalesSection isAdmin={isAdmin} />
+            <SucursalesSection isAdmin={isAdmin} />
 
-        <TransportadorasSection isAdmin={isAdmin} />
+            <TransportadorasSection isAdmin={isAdmin} />
+          </>
+        )}
 
         {/* Envíos y pagos */}
         <div className="section-card p-6 space-y-4">

@@ -5,6 +5,7 @@ import { productService } from '../../../services/productService'
 import { categoryService } from '../../../services/categoryService'
 import { subcategoryService } from '../../../services/subcategoryService'
 import { empaqueService } from '../../../services/empaqueService'
+import { tiendaConfigService } from '../../../services/tiendaConfigService'
 import { api } from '../../../services/api'
 import Input from '../../../components/ui/Input'
 import Select from '../../../components/ui/Select'
@@ -210,6 +211,9 @@ export default function ProductFormPage() {
   const [categoryOptions, setCategoryOptions] = useState([{ value: '', label: 'Seleccionar categoría...' }])
   const [subcatOptions, setSubcatOptions] = useState([{ value: '', label: 'Sin subcategoría' }])
   const [empaqueOptions, setEmpaqueOptions] = useState([{ value: '', label: 'Sin empaque asignado' }])
+  // Empaque solo es relevante con envío real (Envia.com) activo — con 'contra_entrega'/'fijo'
+  // asignarle una caja a un producto no tiene ningún efecto, mostrarlo confundía (ver Settings).
+  const [envioModo, setEnvioModo] = useState(null)
   const imgInputRef = useRef(null)
   const vidInputRef = useRef(null)
   const [filtroColorFoto, setFiltroColorFoto] = useState(null)
@@ -222,6 +226,12 @@ export default function ProductFormPage() {
         ...list.map((c) => ({ value: c.id, label: c.nombre })),
       ])
     }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    tiendaConfigService.get()
+      .then((cfg) => setEnvioModo(cfg?.envio_modo ?? 'contra_entrega'))
+      .catch(() => setEnvioModo('contra_entrega'))
   }, [])
 
   useEffect(() => {
@@ -378,6 +388,11 @@ export default function ProductFormPage() {
         e.precioOferta = 'Ingresa el precio de oferta'
       else if (Number(form.precioOferta) >= Number(form.precio))
         e.precioOferta = 'El precio oferta debe ser menor al precio normal'
+    }
+    // Con envío real (Envia.com) activo, todo producto necesita un empaque para poder
+    // cotizarse — si se deja sin asignar, el checkout fallaría en cuanto alguien lo compre.
+    if (envioModo === 'envia' && !form.empaque_id) {
+      e.empaque_id = 'Con envío real activo, todo producto necesita un empaque asignado'
     }
     return e
   }
@@ -789,15 +804,17 @@ export default function ProductFormPage() {
           </div>
         </Section>
 
-        {/* ── Envío ── */}
-        <Section title="Envío" isEdit={isEdit} status={sectionStatus.envio} onSave={saveSection('envio')}>
-          <Select label="Empaque (caja) asignado" value={form.empaque_id}
-            onChange={set('empaque_id')} options={empaqueOptions} />
-          <p className="text-xs text-gray-400 -mt-2">
-            Necesario para que la tienda pueda cotizar el envío real (Envia.com). Crea o edita
-            empaques desde Configuración.
-          </p>
-        </Section>
+        {/* ── Envío — solo si la tienda tiene activo el envío real (Envia.com) ── */}
+        {envioModo === 'envia' && (
+          <Section title="Envío" isEdit={isEdit} status={sectionStatus.envio} onSave={saveSection('envio')}>
+            <Select label="Empaque (caja) asignado" value={form.empaque_id}
+              onChange={set('empaque_id')} options={empaqueOptions} error={errors.empaque_id} />
+            <p className="text-xs text-gray-400 -mt-2">
+              Necesario para que la tienda pueda cotizar el envío real (Envia.com). Crea o edita
+              empaques desde Configuración.
+            </p>
+          </Section>
+        )}
 
         {/* ── Estado ── */}
         <Section title="Estado del producto" isEdit={isEdit} status={sectionStatus.estado} onSave={saveSection('estado')}>
