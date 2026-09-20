@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Plus, Trash2, Upload, Video, X } from 'lucide-react'
 import { productService } from '../../../services/productService'
 import { categoryService } from '../../../services/categoryService'
 import { subcategoryService } from '../../../services/subcategoryService'
+import { empaqueService } from '../../../services/empaqueService'
 import { api } from '../../../services/api'
 import Input from '../../../components/ui/Input'
 import Select from '../../../components/ui/Select'
@@ -94,6 +95,7 @@ function emptyForm() {
     ofertaActiva: false, precioOferta: '', ofertaHasta: '',
     ficha_tecnica: { tipo_articulo: '', marca: '', material: '', genero: '' },
     activo: true,
+    empaque_id: '',
     variantes: [],
     imagenes: [],  // solo tipo "imagen"
     video: null,   // URL string o null
@@ -126,6 +128,8 @@ function buildBasePayload(form) {
     oferta_hasta: form.ofertaActiva && form.ofertaHasta ? form.ofertaHasta : null,
     ficha_tecnica: form.ficha_tecnica,
     activo:   form.activo,
+    // Empaque (caja) asignado — PLAN_INTEGRACION_ENVIA.md, Fase 1. Igual que sub_id: null lo quita.
+    empaque_id: form.empaque_id ? Number(form.empaque_id) : null,
   }
 }
 
@@ -205,6 +209,7 @@ export default function ProductFormPage() {
   const [sectionStatus, setSectionStatus] = useState({})
   const [categoryOptions, setCategoryOptions] = useState([{ value: '', label: 'Seleccionar categoría...' }])
   const [subcatOptions, setSubcatOptions] = useState([{ value: '', label: 'Sin subcategoría' }])
+  const [empaqueOptions, setEmpaqueOptions] = useState([{ value: '', label: 'Sin empaque asignado' }])
   const imgInputRef = useRef(null)
   const vidInputRef = useRef(null)
   const [filtroColorFoto, setFiltroColorFoto] = useState(null)
@@ -215,6 +220,19 @@ export default function ProductFormPage() {
       setCategoryOptions([
         { value: '', label: 'Seleccionar categoría...' },
         ...list.map((c) => ({ value: c.id, label: c.nombre })),
+      ])
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    empaqueService.getAll().then((data) => {
+      const list = Array.isArray(data) ? data : []
+      setEmpaqueOptions([
+        { value: '', label: 'Sin empaque asignado' },
+        ...list.map((e) => ({
+          value: e.id,
+          label: `${e.nombre} — ${e.largo_cm}×${e.ancho_cm}×${e.alto_cm} cm, ${e.peso_gramos} g${e.activo ? '' : ' (inactivo)'}`,
+        })),
       ])
     }).catch(() => {})
   }, [])
@@ -246,6 +264,7 @@ export default function ProductFormPage() {
           ...(p.ficha_tecnica ?? {}),  // preserva todos los campos extra ya guardados
         },
         activo: p.activo,
+        empaque_id: p.empaque_id ?? '',
         variantes: (p.variantes ?? []).map((v) => ({ ...v })),
         imagenes,
         video: videoItem ? { url: videoItem.url } : null,
@@ -768,6 +787,16 @@ export default function ProductFormPage() {
 
             <input ref={vidInputRef} type="file" accept="video/*" className="hidden" onChange={handleVidUpload} />
           </div>
+        </Section>
+
+        {/* ── Envío ── */}
+        <Section title="Envío" isEdit={isEdit} status={sectionStatus.envio} onSave={saveSection('envio')}>
+          <Select label="Empaque (caja) asignado" value={form.empaque_id}
+            onChange={set('empaque_id')} options={empaqueOptions} />
+          <p className="text-xs text-gray-400 -mt-2">
+            Necesario para que la tienda pueda cotizar el envío real (Envia.com). Crea o edita
+            empaques desde Configuración.
+          </p>
         </Section>
 
         {/* ── Estado ── */}
