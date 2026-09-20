@@ -945,15 +945,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Zona peligrosa */}
-        <div className="section-card p-5 border-l-4 border-red-500">
-          <h2 className="text-sm font-bold text-red-600 mb-1">Zona de riesgo</h2>
-          <p className="text-xs text-gray-500 mb-3">Estas acciones son irreversibles. Úsalas con cuidado.</p>
-          <button type="button" onClick={() => confirm('¿Resetear todos los datos al estado inicial?') && localStorage.clear() && window.location.reload()} className="btn-danger text-xs">
-            Resetear todos los datos
-          </button>
-        </div>
-
         {/* Save */}
         <div className="flex items-center justify-end gap-3">
           {!isAdmin && (
