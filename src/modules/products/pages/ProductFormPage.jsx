@@ -129,8 +129,14 @@ function buildBasePayload(form) {
     oferta_hasta: form.ofertaActiva && form.ofertaHasta ? form.ofertaHasta : null,
     ficha_tecnica: form.ficha_tecnica,
     activo:   form.activo,
-    // Empaque (caja) asignado — PLAN_INTEGRACION_ENVIA.md, Fase 1. Igual que sub_id: null lo quita.
+    // Empaque (caja) asignado — PLAN_INTEGRACION_ENVIA.md, Fase 1.
     empaque_id: form.empaque_id ? Number(form.empaque_id) : null,
+    // sub_id/empaque_id en null por sí solo YA NO lo borra (el backend protege actualizaciones
+    // parciales que no tocan estos campos) — estas banderas son la única forma de borrarlos a
+    // propósito. Como este payload va completo en cada guardado de sección, siempre reflejan la
+    // selección actual: "Sin subcategoría"/"Sin empaque asignado" en el desplegable → true.
+    limpiar_sub_id: !form.sub_id,
+    limpiar_empaque_id: !form.empaque_id,
   }
 }
 
