@@ -12,6 +12,7 @@ import CustomersPage from './modules/customers/pages/CustomersPage'
 import CustomerDetailPage from './modules/customers/pages/CustomerDetailPage'
 import InventoryPage from './modules/inventory/pages/InventoryPage'
 import ReportsPage from './modules/reports/pages/ReportsPage'
+import AnaliticaPage from './modules/analytics/pages/AnaliticaPage'
 import BannersPage from './modules/banners/pages/BannersPage'
 import ColeccionesPage from './modules/colecciones/pages/ColeccionesPage'
 import SettingsPage from './modules/settings/pages/SettingsPage'
@@ -51,6 +52,7 @@ export default function App() {
 
             {/* Análisis */}
             <Route path="reportes" element={<ReportsPage />} />
+            <Route path="analitica" element={<AnaliticaPage />} />
 
             {/* Sistema */}
             <Route path="banners" element={<BannersPage />} />

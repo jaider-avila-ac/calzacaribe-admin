@@ -37,7 +37,10 @@ const NAV = [
   {
     group: 'Análisis',
     icon: BarChart2,
-    items: [{ label: 'Reportes', path: '/reportes', roles: ['admin', 'superadmin'] }],
+    items: [
+      { label: 'Reportes', path: '/reportes', roles: ['admin', 'superadmin'] },
+      { label: 'Analítica', path: '/analitica', roles: ['admin', 'superadmin'] },
+    ],
   },
   {
     group: 'Sistema',
