@@ -789,13 +789,17 @@ export default function SettingsPage() {
 
         <DireccionesDevolucionSection />
 
-        {/* Empaques/sucursales-origen/transportadoras solo son relevantes cuando el envío real
-            (Envia.com) está activo — con envio_modo='contra_entrega'/'fijo' no aplican, y
-            mostrarlas confundía pidiendo datos (ej. dirección de sucursal) que no hacen falta. */}
+        {/* Los empaques se pueden ir creando desde antes de activar el envío real (Envia.com) —
+            así, cuando el admin por fin activa 'envia', ya tiene su catálogo de empaques listo en
+            vez de tener que crearlos a última hora (ver EmpaqueService.create en el backend: no
+            tiene ninguna restricción por envio_modo, siempre fue seguro crearlos en cualquier
+            momento — lo único que hacía falta era dejar de esconder esta sección). */}
+        <EmpaquesSection isAdmin={isAdmin} />
+
+        {/* Sucursales/transportadoras sí son específicas de envío real: piden datos (ej.
+            dirección de origen) que no aplican con 'contra_entrega'/'fijo'. */}
         {envioModo === 'envia' && (
           <>
-            <EmpaquesSection isAdmin={isAdmin} />
-
             <SucursalesSection isAdmin={isAdmin} />
 
             <TransportadorasSection isAdmin={isAdmin} />
