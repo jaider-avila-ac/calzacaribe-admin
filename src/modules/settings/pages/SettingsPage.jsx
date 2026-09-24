@@ -666,6 +666,9 @@ export default function SettingsPage() {
   const [dominioStaff, setDominioStaff] = useState('')
   const [emailNotificacionPedidos, setEmailNotificacionPedidos] = useState('')
   const [envioConfigLoaded, setEnvioConfigLoaded] = useState(false)
+  // El mínimo para envío gratis aplica en "costo fijo" y en "contra entrega" (ahí, al alcanzarlo,
+  // la tienda asume el envío). En "envío real" lo decide la cotización, no este monto.
+  const envioGratisEditable = envioModo === 'fijo' || envioModo === 'contra_entrega'
 
   useEffect(() => {
     tiendaConfigService.get()
@@ -893,27 +896,31 @@ export default function SettingsPage() {
             )}
           </div>
 
-          <div className={`pt-2 border-t border-gray-100 space-y-4 ${envioModo !== 'fijo' ? 'opacity-50' : ''}`}>
-            <Input
-              label="Costo de envío base (COP)"
-              type="number"
-              value={envioCosto}
-              onChange={(e) => setEnvioCosto(e.target.value)}
-              disabled={!envioConfigLoaded || envioModo !== 'fijo'}
-              placeholder={envioConfigLoaded ? '' : 'Cargando...'}
-            />
-            <div className="space-y-3">
+          <div className="pt-2 border-t border-gray-100 space-y-4">
+            <div className={envioModo !== 'fijo' ? 'opacity-50' : ''}>
+              <Input
+                label="Costo de envío base (COP)"
+                type="number"
+                value={envioCosto}
+                onChange={(e) => setEnvioCosto(e.target.value)}
+                disabled={!envioConfigLoaded || envioModo !== 'fijo'}
+                placeholder={envioConfigLoaded ? '' : 'Cargando...'}
+              />
+            </div>
+            <div className={`space-y-3 ${envioGratisEditable ? '' : 'opacity-50'}`}>
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xs font-bold text-black">Envío gratis por monto mínimo</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Muestra la barra de progreso "te faltan $X para envío gratis" en la tienda.
+                    {envioModo === 'contra_entrega'
+                      ? 'Si la compra llega a este monto, la tienda asume el envío y el cliente no paga nada al recibir. Por debajo, paga el envío al transportador. También muestra la barra "te faltan $X para envío gratis".'
+                      : 'Muestra la barra de progreso "te faltan $X para envío gratis" en la tienda.'}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEnvioGratisActivo((v) => !v)}
-                  disabled={!envioConfigLoaded || envioModo !== 'fijo'}
+                  disabled={!envioConfigLoaded || !envioGratisEditable}
                   className={`relative h-7 w-14 transition-colors flex-shrink-0 disabled:opacity-50 ${envioGratisActivo ? 'bg-admin-accent' : 'bg-gray-200'}`}
                   aria-pressed={envioGratisActivo}
                   aria-label="Activar envío gratis por monto mínimo"
@@ -927,7 +934,7 @@ export default function SettingsPage() {
                 value={envioGratisDesde}
                 onChange={(e) => setEnvioGratisDesde(e.target.value)}
                 placeholder={envioConfigLoaded ? '' : 'Cargando...'}
-                disabled={!envioGratisActivo || envioModo !== 'fijo'}
+                disabled={!envioGratisActivo || !envioGratisEditable}
                 className={!envioGratisActivo ? 'opacity-50' : ''}
               />
             </div>
