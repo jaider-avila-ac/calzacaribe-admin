@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Save, Plus, Trash2, Upload, Video, X } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Trash2, Upload, Video, X, Ruler } from 'lucide-react'
 import { productService } from '../../../services/productService'
 import { categoryService } from '../../../services/categoryService'
 import { subcategoryService } from '../../../services/subcategoryService'
@@ -10,6 +10,7 @@ import { api } from '../../../services/api'
 import Input from '../../../components/ui/Input'
 import Select from '../../../components/ui/Select'
 import { slugify } from '../../../utils/format'
+import { toast } from '../../../components/ui/Toast'
 
 const MAX_VIDEO_MB = 50
 
@@ -83,6 +84,20 @@ const CAMPOS_EXTRAS = {
   ],
 }
 
+const HEX_VALIDO = /^#[0-9a-f]{6}$/i
+
+/** Normaliza un hex escrito a mano ("fff", "#FFF", "ffffff") a "#ffffff"; null si no es válido. */
+function normalizarHex(valor) {
+  let h = String(valor ?? '').trim().replace(/^#/, '')
+  if (/^[0-9a-f]{3}$/i.test(h)) h = h.split('').map((c) => c + c).join('')
+  return /^[0-9a-f]{6}$/i.test(h) ? `#${h.toLowerCase()}` : null
+}
+
+// Pesos enteros, sin puntos ni comas: "120.000" en un campo numérico se lee como 120, así que
+// se rechaza con un mensaje claro en vez de guardar un precio mil veces menor.
+const PRECIO_VALIDO = /^\d+$/
+const MSG_PRECIO = 'Escribe el precio sin puntos ni comas (ej: 120000)'
+
 function emptyVariant() {
   return { talla: '', color: '', color_hex: '#000000', stock: 0, activo: true }
 }
@@ -100,6 +115,7 @@ function emptyForm() {
     variantes: [],
     imagenes: [],  // solo tipo "imagen"
     video: null,   // URL string o null
+    guia_tallas: null, // { url, _file? } o null — imagen con la tabla de medidas
   }
 }
 
@@ -172,6 +188,18 @@ async function uploadPendingMedia(form, productId) {
   }
 
   return { imagenesFinales, videoUrl }
+}
+
+/** Sube la guía de tallas si es nueva. Devuelve su url final, o null si el producto no tiene. */
+async function uploadGuiaTallas(guia, productId) {
+  if (!guia) return null
+  if (!guia._file) return guia.url
+  const fd = new FormData()
+  fd.append('file', guia._file)
+  fd.append('productId', productId)
+  const { url } = await api.upload('/upload/imagen', fd)
+  URL.revokeObjectURL(guia.url)
+  return url
 }
 
 function buildMediaPayload({ imagenesFinales, videoUrl }) {
@@ -284,6 +312,7 @@ export default function ProductFormPage() {
         variantes: (p.variantes ?? []).map((v) => ({ ...v })),
         imagenes,
         video: videoItem ? { url: videoItem.url } : null,
+        guia_tallas: p.guia_tallas_url ? { url: p.guia_tallas_url } : null,
       }
       setForm(loadedForm)
       if (p.cat_id) loadSubcats(p.cat_id)
@@ -299,7 +328,16 @@ export default function ProductFormPage() {
     }).catch(() => {})
   }
 
-  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  // Al editar un campo se quita su error: antes el aviso rojo quedaba aunque ya estuviera corregido
+  const clearError = (field) => setErrors((e) => {
+    if (!(field in e)) return e
+    const { [field]: _, ...resto } = e
+    return resto
+  })
+  const set = (field) => (e) => {
+    setForm((f) => ({ ...f, [field]: e.target.value }))
+    clearError(field)
+  }
   const setFicha = (field) => (e) =>
     setForm((f) => ({ ...f, ficha_tecnica: { ...f.ficha_tecnica, [field]: e.target.value } }))
 
@@ -320,10 +358,12 @@ export default function ProductFormPage() {
   const handleNombre = (e) => {
     const nombre = e.target.value
     setForm((f) => ({ ...f, nombre, slug: slugify(nombre) }))
+    clearError('nombre'); clearError('slug')
   }
   const handleCat = (e) => {
     const catId = e.target.value
     setForm((f) => ({ ...f, cat_id: catId, sub_id: '' }))
+    clearError('cat_id')
     if (catId) loadSubcats(catId)
     else setSubcatOptions([{ value: '', label: 'Sin subcategoría' }])
   }
@@ -339,7 +379,7 @@ export default function ProductFormPage() {
     const files = Array.from(e.target.files)
     if (!files.length) return
     const remaining = 5 - form.imagenes.length
-    if (remaining <= 0) { alert('Máximo 5 imágenes por producto.'); return }
+    if (remaining <= 0) { toast.error('Máximo 5 imágenes por producto.'); return }
     const maxOrd = Math.max(0, ...form.imagenes.map((i) => i.orden ?? 0))
     const nuevas = files.slice(0, remaining).map((file, i) => ({
       url: URL.createObjectURL(file),
@@ -369,7 +409,7 @@ export default function ProductFormPage() {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
-      alert(`El video no puede superar ${MAX_VIDEO_MB} MB.`)
+      toast.error(`El video no puede superar ${MAX_VIDEO_MB} MB.`)
       if (vidInputRef.current) vidInputRef.current.value = ''
       return
     }
@@ -382,16 +422,32 @@ export default function ProductFormPage() {
     setForm((f) => ({ ...f, video: null }))
   }
 
+  /* ── guía de tallas ─────────────────────────────────── */
+  const guiaInputRef = useRef(null)
+  const handleGuiaUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (form.guia_tallas?._file) URL.revokeObjectURL(form.guia_tallas.url)
+    setForm((f) => ({ ...f, guia_tallas: { url: URL.createObjectURL(file), _file: file } }))
+    if (guiaInputRef.current) guiaInputRef.current.value = ''
+  }
+  const removeGuia = () => {
+    if (form.guia_tallas?._file) URL.revokeObjectURL(form.guia_tallas.url)
+    setForm((f) => ({ ...f, guia_tallas: null }))
+  }
+
   /* ── validación ─────────────────────────────────────── */
   const validate = () => {
     const e = {}
     if (!form.nombre.trim()) e.nombre = 'El nombre es obligatorio'
     if (!form.slug.trim())   e.slug   = 'El slug es obligatorio'
     if (!form.cat_id)        e.cat_id = 'Selecciona una categoría'
-    if (!form.precio || isNaN(Number(form.precio))) e.precio = 'Precio inválido'
+    if (!PRECIO_VALIDO.test(String(form.precio).trim())) e.precio = MSG_PRECIO
     if (form.ofertaActiva) {
-      if (!form.precioOferta || isNaN(Number(form.precioOferta)))
+      if (!String(form.precioOferta).trim())
         e.precioOferta = 'Ingresa el precio de oferta'
+      else if (!PRECIO_VALIDO.test(String(form.precioOferta).trim()))
+        e.precioOferta = MSG_PRECIO
       else if (Number(form.precioOferta) >= Number(form.precio))
         e.precioOferta = 'El precio oferta debe ser menor al precio normal'
     }
@@ -407,10 +463,14 @@ export default function ProductFormPage() {
     setSectionStatus((s) => ({ ...s, [key]: { saving: false, saved: false, error: '', ...s[key], ...patch } }))
 
   /** Guarda una sección específica del producto (solo disponible en modo edición). */
-  const saveSection = (key, { withVariantes = false, withMedia = false } = {}) => async (e) => {
+  const saveSection = (key, { withVariantes = false, withMedia = false, withGuia = false } = {}) => async (e) => {
     e.preventDefault()
     const errs = validate()
-    if (Object.keys(errs).length) { setErrors(errs); return }
+    setErrors(errs) // también limpia los errores viejos cuando ya todo es válido
+    if (Object.keys(errs).length) {
+      toast.error('Revisa los campos marcados en rojo antes de guardar.')
+      return
+    }
     setStatus(key, { saving: true, saved: false, error: '' })
     try {
       const data = buildBasePayload(form)
@@ -426,11 +486,20 @@ export default function ProductFormPage() {
           video: videoUrl ? { url: videoUrl } : null,
         }))
       }
+      if (withGuia) {
+        const url = await uploadGuiaTallas(form.guia_tallas, id)
+        if (url) data.guia_tallas_url = url
+        else data.limpiar_guia_tallas = true
+        setForm((f) => ({ ...f, guia_tallas: url ? { url } : null }))
+      }
       await productService.update(id, data)
       setStatus(key, { saving: false, saved: true })
       setTimeout(() => setStatus(key, { saved: false }), 2000)
+      toast.success('Producto guardado con éxito.')
     } catch (err) {
-      setStatus(key, { saving: false, error: err.message || 'No se pudo guardar' })
+      const msg = err.message || 'No se pudo guardar'
+      setStatus(key, { saving: false, error: msg })
+      toast.error(`No se pudo guardar: ${msg}`)
     }
   }
 
@@ -440,7 +509,11 @@ export default function ProductFormPage() {
    *  principio, en vez de en una carpeta "productos/new" que nunca se corrige después. */
   const handleCreate = async () => {
     const errs = validate()
-    if (Object.keys(errs).length) { setErrors(errs); return }
+    setErrors(errs)
+    if (Object.keys(errs).length) {
+      toast.error('Revisa los campos marcados en rojo antes de guardar.')
+      return
+    }
     setSaving(true)
     try {
       const base = buildBasePayload(form)
@@ -448,14 +521,18 @@ export default function ProductFormPage() {
       const created = await productService.create(base)
 
       const { imagenesFinales, videoUrl } = await uploadPendingMedia(form, created.id)
-      if (imagenesFinales.length > 0 || videoUrl) {
+      const guiaUrl = await uploadGuiaTallas(form.guia_tallas, created.id)
+      const hayMedia = imagenesFinales.length > 0 || videoUrl
+      if (hayMedia || guiaUrl) {
         await productService.update(created.id, {
-          imagenes: buildMediaPayload({ imagenesFinales, videoUrl }),
+          ...(hayMedia ? { imagenes: buildMediaPayload({ imagenesFinales, videoUrl }) } : {}),
+          ...(guiaUrl ? { guia_tallas_url: guiaUrl } : {}),
         })
       }
+      toast.success('Producto creado con éxito.')
       navigate('/productos')
     } catch (err) {
-      alert('Error al guardar: ' + err.message)
+      toast.error('Error al guardar: ' + err.message)
       setSaving(false)
     }
   }
@@ -642,10 +719,15 @@ export default function ProductFormPage() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <input type="color" value={v.color_hex}
+                          {/* El selector solo acepta un hex completo; mientras se escribe a mano muestra el último válido */}
+                          <input type="color" value={HEX_VALIDO.test(v.color_hex) ? v.color_hex : '#000000'}
                             onChange={(e) => setVariant(idx, 'color_hex', e.target.value)}
                             className="w-10 h-9 border border-gray-200 cursor-pointer p-0.5" />
-                          <span className="text-xs text-gray-400 font-mono">{v.color_hex}</span>
+                          <input value={v.color_hex}
+                            onChange={(e) => setVariant(idx, 'color_hex', e.target.value)}
+                            onBlur={(e) => setVariant(idx, 'color_hex', normalizarHex(e.target.value) ?? '#000000')}
+                            placeholder="#000000" maxLength={7} spellCheck={false}
+                            className={`input-field w-24 text-sm font-mono ${HEX_VALIDO.test(v.color_hex) ? '' : 'border-red-400'}`} />
                         </div>
                       </td>
                       <td className="px-3 py-2">
@@ -808,6 +890,42 @@ export default function ProductFormPage() {
 
             <input ref={vidInputRef} type="file" accept="video/*" className="hidden" onChange={handleVidUpload} />
           </div>
+        </Section>
+
+        {/* ── Guía de tallas ── */}
+        <Section title="Guía de tallas" isEdit={isEdit} status={sectionStatus.guia}
+          onSave={saveSection('guia', { withGuia: true })}>
+          <p className="text-xs text-gray-400 -mt-1">
+            Opcional. Sube la imagen con la tabla de medidas de este producto; en la tienda aparece
+            el enlace "Guía de tallas" junto a las tallas. Si no la subes, el enlace no se muestra.
+          </p>
+          {form.guia_tallas ? (
+            <div className="flex items-start gap-4">
+              <a href={form.guia_tallas.url} target="_blank" rel="noopener noreferrer">
+                <img src={form.guia_tallas.url} alt="Guía de tallas"
+                  className={`w-40 max-h-40 object-contain bg-gray-100 ${form.guia_tallas._file ? 'ring-2 ring-offset-1 ring-yellow-400' : ''}`} />
+              </a>
+              <div className="mt-1 space-y-2">
+                {form.guia_tallas._file && (
+                  <p className="text-[10px] text-yellow-600 font-semibold">Pendiente — se sube al guardar</p>
+                )}
+                <button type="button" onClick={() => guiaInputRef.current?.click()}
+                  className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-black">
+                  <Upload size={13} /> Cambiar imagen
+                </button>
+                <button type="button" onClick={removeGuia}
+                  className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700">
+                  <X size={13} /> Quitar guía de tallas
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => guiaInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all text-sm text-gray-500">
+              <Ruler size={16} /> Subir guía de tallas
+            </button>
+          )}
+          <input ref={guiaInputRef} type="file" accept="image/*" className="hidden" onChange={handleGuiaUpload} />
         </Section>
 
         {/* ── Envío — solo si la tienda tiene activo el envío real (Envia.com) ── */}
