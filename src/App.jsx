@@ -21,6 +21,7 @@ import LocalSalePage from './modules/local-sale/pages/LocalSalePage'
 import AuditLogPage from './modules/audit-log/pages/AuditLogPage'
 import DevolucionesPage from './modules/returns/pages/DevolucionesPage'
 import QuestionsPage from './modules/questions/pages/QuestionsPage'
+import CuponesPage from './modules/cupones/pages/CuponesPage'
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="devoluciones" element={<DevolucionesPage />} />
             <Route path="preguntas" element={<QuestionsPage />} />
             <Route path="venta-local" element={<LocalSalePage />} />
+            <Route path="cupones" element={<CuponesPage />} />
             <Route path="clientes" element={<CustomersPage />} />
             <Route path="clientes/:id" element={<CustomerDetailPage />} />
 

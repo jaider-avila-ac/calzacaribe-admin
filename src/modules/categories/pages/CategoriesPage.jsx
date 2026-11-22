@@ -8,6 +8,8 @@ import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
 import Input from '../../../components/ui/Input'
 import EmptyState from '../../../components/ui/EmptyState'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
+import { toast } from '../../../components/ui/Toast'
 
 function emptycat() {
   return { nombre: '', slug: '', imagen_url: '', orden: 0, activo: true, _pendingFile: null }
@@ -91,9 +93,20 @@ export default function CategoriesPage() {
     }
   }
 
-  const handleDelete = async (cat) => {
-    if (!confirm(`¿Eliminar la categoría "${cat.nombre}"?`)) return
-    await remove(cat.id)
+  const [deleteCatTarget, setDeleteCatTarget] = useState(null)
+  const [deletingCat, setDeletingCat] = useState(false)
+
+  const confirmDeleteCat = async () => {
+    if (!deleteCatTarget) return
+    setDeletingCat(true)
+    try {
+      await remove(deleteCatTarget.id)
+      setDeleteCatTarget(null)
+    } catch (err) {
+      toast.error(err.message || 'No se pudo eliminar la categoría')
+    } finally {
+      setDeletingCat(false)
+    }
   }
 
   const toggleExpand = (id) => setExpanded((e) => ({ ...e, [id]: !e[id] }))
@@ -134,10 +147,21 @@ export default function CategoriesPage() {
     }
   }
 
-  const handleSubDelete = async (sub) => {
-    if (!confirm(`¿Eliminar subcategoría "${sub.nombre}"?`)) return
-    await subcategoryService.remove(sub.id)
-    await reloadSubcats(sub.cat_id)
+  const [deleteSubTarget, setDeleteSubTarget] = useState(null)
+  const [deletingSub, setDeletingSub] = useState(false)
+
+  const confirmDeleteSub = async () => {
+    if (!deleteSubTarget) return
+    setDeletingSub(true)
+    try {
+      await subcategoryService.remove(deleteSubTarget.id)
+      await reloadSubcats(deleteSubTarget.cat_id)
+      setDeleteSubTarget(null)
+    } catch (err) {
+      toast.error(err.message || 'No se pudo eliminar la subcategoría')
+    } finally {
+      setDeletingSub(false)
+    }
   }
 
   const moveCategory = async (index, dir) => {
@@ -223,7 +247,7 @@ export default function CategoriesPage() {
                   <Badge variant={cat.activo ? 'success' : 'danger'}>{cat.activo ? 'Activa' : 'Inactiva'}</Badge>
                   <div className="flex gap-1">
                     <button onClick={() => openEdit(cat)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors"><Edit2 size={14} /></button>
-                    <button onClick={() => handleDelete(cat)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                    <button onClick={() => setDeleteCatTarget(cat)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
                   </div>
                 </div>
 
@@ -250,7 +274,7 @@ export default function CategoriesPage() {
                         <Badge variant={sub.activo ? 'success' : 'danger'} className="text-xs">{sub.activo ? 'Activa' : 'Inactiva'}</Badge>
                         <div className="flex gap-1">
                           <button onClick={() => openSubEdit(sub)} className="p-1 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors"><Edit2 size={12} /></button>
-                          <button onClick={() => handleSubDelete(sub)} className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={12} /></button>
+                          <button onClick={() => setDeleteSubTarget(sub)} className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={12} /></button>
                         </div>
                       </div>
                     ))}
@@ -339,6 +363,28 @@ export default function CategoriesPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        open={!!deleteCatTarget}
+        onClose={() => setDeleteCatTarget(null)}
+        onConfirm={confirmDeleteCat}
+        title="Eliminar categoría"
+        message={deleteCatTarget && `¿Eliminar la categoría "${deleteCatTarget.nombre}"?`}
+        confirmLabel="Eliminar"
+        danger
+        loading={deletingCat}
+      />
+
+      <ConfirmModal
+        open={!!deleteSubTarget}
+        onClose={() => setDeleteSubTarget(null)}
+        onConfirm={confirmDeleteSub}
+        title="Eliminar subcategoría"
+        message={deleteSubTarget && `¿Eliminar subcategoría "${deleteSubTarget.nombre}"?`}
+        confirmLabel="Eliminar"
+        danger
+        loading={deletingSub}
+      />
     </div>
   )
 }

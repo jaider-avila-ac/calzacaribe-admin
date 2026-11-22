@@ -6,6 +6,7 @@ import { orderService, ESTADOS_FILTRO_PEDIDOS, METODO_PAGO_LABEL } from '../../.
 import { sucursalService } from '../../../services/sucursalService'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
+import { toast } from '../../../components/ui/Toast'
 import { formatCurrency, formatDate } from '../../../utils/format'
 
 const ESTADOS = ESTADOS_FILTRO_PEDIDOS
@@ -52,7 +53,7 @@ export default function OrdersPage() {
       await orderService.asignarme(id)
       await reload()
     } catch (err) {
-      alert(err.message || 'No se pudo tomar el pedido')
+      toast.error(err.message || 'No se pudo tomar el pedido')
     } finally {
       setTomando(null)
     }
@@ -149,7 +150,14 @@ export default function OrdersPage() {
                   <td className="table-cell px-4 text-gray-500">
                     {order.metodo_pago ? (METODO_PAGO_LABEL[order.metodo_pago] ?? order.metodo_pago) : '—'}
                   </td>
-                  <td className="table-cell px-4 text-right font-bold text-black">{formatCurrency(order.total)}</td>
+                  <td className="table-cell px-4 text-right">
+                    <p className="font-bold text-black">{formatCurrency(order.total)}</p>
+                    {order.descuento > 0 && (
+                      <p className="text-[10px] font-semibold text-admin-accent uppercase tracking-wide">
+                        -{formatCurrency(order.descuento)}{order.cupon_codigo ? ` · ${order.cupon_codigo}` : ''}
+                      </p>
+                    )}
+                  </td>
                   <td className="table-cell px-4 text-center">
                     <Badge variant={BADGE_MAP[order.estado]}>{ESTADO_LABEL[order.estado]}</Badge>
                   </td>

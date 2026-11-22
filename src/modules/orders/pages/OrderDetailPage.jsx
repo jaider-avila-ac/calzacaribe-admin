@@ -8,6 +8,7 @@ import { tiendaConfigService } from '../../../services/tiendaConfigService'
 import { pedidoEnvioService } from '../../../services/pedidoEnvioService'
 import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
 import { formatCurrency, formatDate } from '../../../utils/format'
 
 const REEMBOLSO_BADGE = { pendiente: 'warning', en_proceso: 'info', completado: 'success', rechazado: 'danger', error: 'danger' }
@@ -68,6 +69,7 @@ function EnvioRealSection({ order, isAdmin }) {
   const [elegida, setElegida] = useState(null)
   const [generando, setGenerando] = useState(false)
   const [resultado, setResultado] = useState(null)
+  const [confirmGuiaOpen, setConfirmGuiaOpen] = useState(false)
 
   const cargar = () => {
     setLoading(true)
@@ -82,7 +84,7 @@ function EnvioRealSection({ order, isAdmin }) {
 
   const generar = async () => {
     if (!isAdmin || !elegida) return
-    if (!confirm(`¿Generar la guía real con ${carrierLabel(elegida.carrier)} — ${elegida.servicio_descripcion} por ${formatCurrency(elegida.precio_cop)}? Esto cobra de la cuenta de Envia de la tienda y no se puede deshacer.`)) return
+    setConfirmGuiaOpen(false)
     setGenerando(true)
     setError('')
     try {
@@ -169,7 +171,7 @@ function EnvioRealSection({ order, isAdmin }) {
                 </label>
               ))}
               {isAdmin ? (
-                <button onClick={generar} disabled={!elegida || generando} className="btn-primary text-xs mt-2 disabled:opacity-50">
+                <button onClick={() => setConfirmGuiaOpen(true)} disabled={!elegida || generando} className="btn-primary text-xs mt-2 disabled:opacity-50">
                   {generando ? 'Generando...' : 'Generar guía real (cobra ya)'}
                 </button>
               ) : (
@@ -183,6 +185,17 @@ function EnvioRealSection({ order, isAdmin }) {
       )}
 
       {error && <p className="text-xs text-red-500">{error}</p>}
+
+      <ConfirmModal
+        open={confirmGuiaOpen}
+        onClose={() => setConfirmGuiaOpen(false)}
+        onConfirm={generar}
+        title="Generar guía real"
+        message={elegida && `¿Generar la guía real con ${carrierLabel(elegida.carrier)} — ${elegida.servicio_descripcion} por ${formatCurrency(elegida.precio_cop)}? Esto cobra de la cuenta de Envia de la tienda y no se puede deshacer.`}
+        confirmLabel="Generar y cobrar"
+        danger
+        loading={generando}
+      />
     </div>
   )
 }
@@ -795,7 +808,7 @@ export default function OrderDetailPage() {
           </div>
           {order.descuento > 0 && (
             <div className="flex justify-between px-5 py-2.5 text-sm text-admin-accent">
-              <span>Descuento</span>
+              <span>Descuento{order.cupon_codigo ? ` (cupón ${order.cupon_codigo})` : ''}</span>
               <span>-{formatCurrency(order.descuento)}</span>
             </div>
           )}

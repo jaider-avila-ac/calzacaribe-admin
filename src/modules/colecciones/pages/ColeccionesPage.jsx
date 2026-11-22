@@ -8,6 +8,8 @@ import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
 import Input from '../../../components/ui/Input'
 import EmptyState from '../../../components/ui/EmptyState'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
+import { toast } from '../../../components/ui/Toast'
 
 function emptyForm() {
   return { nombre: '', slug: '', descripcion: '', activo: true, productoIds: [], imagen_url: '', _pendingFile: null }
@@ -79,7 +81,7 @@ export default function ColeccionesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.nombre.trim()) { alert('El nombre es obligatorio'); return }
+    if (!form.nombre.trim()) { toast.error('El nombre es obligatorio'); return }
     setSaving(true)
     try {
       let imagenUrl = form.imagen_url || null
@@ -103,19 +105,26 @@ export default function ColeccionesPage() {
       await reload()
       closeModal()
     } catch (err) {
-      alert('Error al guardar: ' + err.message)
+      toast.error('Error al guardar: ' + err.message)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = async (c) => {
-    if (!confirm(`¿Eliminar la colección "${c.nombre}"? Se quitarán los productos asignados.`)) return
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      await coleccionService.remove(c.id)
+      await coleccionService.remove(deleteTarget.id)
       await reload()
+      setDeleteTarget(null)
     } catch (err) {
-      alert('Error al eliminar: ' + err.message)
+      toast.error('Error al eliminar: ' + err.message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -194,7 +203,7 @@ export default function ColeccionesPage() {
                   className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors">
                   <Edit2 size={14} />
                 </button>
-                <button onClick={() => handleDelete(c)}
+                <button onClick={() => setDeleteTarget(c)}
                   className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
                   <Trash2 size={14} />
                 </button>
@@ -298,6 +307,17 @@ export default function ColeccionesPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar colección"
+        message={deleteTarget && `¿Eliminar la colección "${deleteTarget.nombre}"? Se quitarán los productos asignados.`}
+        confirmLabel="Eliminar"
+        danger
+        loading={deleting}
+      />
     </div>
   )
 }

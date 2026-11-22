@@ -32,6 +32,7 @@ const NAV = [
       { label: 'Preguntas',    path: '/preguntas'    },
       { label: 'Venta local',  path: '/venta-local'  },
       { label: 'Clientes',    path: '/clientes'    },
+      { label: 'Cupones',     path: '/cupones', roles: ['admin', 'superadmin'] },
     ],
   },
   {

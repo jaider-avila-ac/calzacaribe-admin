@@ -4,6 +4,8 @@ import { Eye, Search, Trash2 } from 'lucide-react'
 import { useCustomers } from '../hooks/useCustomers'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
+import { toast } from '../../../components/ui/Toast'
 import { formatCurrency, formatDate } from '../../../utils/format'
 
 const PROVIDER_LABEL = { EMAIL: 'Email', GOOGLE: 'Google' }
@@ -30,8 +32,20 @@ export default function CustomersPage() {
     return matchSearch && matchStatus
   })
 
-  const handleDelete = (c) => {
-    if (confirm(`¿Desactivar al cliente "${customerName(c)}"?`)) remove(c.id)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await remove(deleteTarget.id)
+      setDeleteTarget(null)
+    } catch (err) {
+      toast.error(err.message || 'No se pudo desactivar el cliente')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -94,7 +108,7 @@ export default function CustomersPage() {
                       <Link to={`/clientes/${c.id}`} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors" title="Ver cliente">
                         <Eye size={14} />
                       </Link>
-                      <button onClick={() => handleDelete(c)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Desactivar cliente">
+                      <button onClick={() => setDeleteTarget(c)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Desactivar cliente">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -105,6 +119,17 @@ export default function CustomersPage() {
           </table>
         )}
       </div>
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Desactivar cliente"
+        message={deleteTarget && `¿Desactivar al cliente "${customerName(deleteTarget)}"?`}
+        confirmLabel="Desactivar"
+        danger
+        loading={deleting}
+      />
     </div>
   )
 }

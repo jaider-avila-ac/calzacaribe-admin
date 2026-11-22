@@ -9,6 +9,7 @@ import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
 import Input from '../../../components/ui/Input'
 import EmptyState from '../../../components/ui/EmptyState'
+import { toast } from '../../../components/ui/Toast'
 
 const ROLES = [
   { value: 'colaborador', label: 'Colaborador' },
@@ -91,7 +92,7 @@ export default function CollaboratorsPage() {
       await collaboratorService.setActivo(item.id, !item.activo)
       load()
     } catch (err) {
-      alert(err.message || 'No se pudo actualizar')
+      toast.error(err.message || 'No se pudo actualizar')
     }
   }
 

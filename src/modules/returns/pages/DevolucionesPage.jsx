@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Eye, PackageX } from 'lucide-react'
+import { Eye, PackageX, Tag } from 'lucide-react'
 import { devolucionService, ESTADOS_DEVOLUCION } from '../../../services/devolucionService'
 import { direccionDevolucionService } from '../../../services/direccionDevolucionService'
 import Badge from '../../../components/ui/Badge'
@@ -96,7 +96,12 @@ export default function DevolucionesPage() {
             <tbody className="divide-y divide-gray-50">
               {solicitudes.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="table-cell px-5 font-bold text-black">{s.numero_pedido}</td>
+                  <td className="table-cell px-5 font-bold text-black">
+                    <span className="flex items-center gap-1.5">
+                      {s.numero_pedido}
+                      {s.cupon_codigo && <Tag size={12} className="text-amber-500" title={`Comprado con cupón ${s.cupon_codigo}`} />}
+                    </span>
+                  </td>
                   <td className="table-cell px-4">
                     <Badge variant={TIPO_BADGE[s.tipo]}>{TIPO_LABEL[s.tipo] || s.tipo}</Badge>
                   </td>
@@ -177,6 +182,18 @@ function DetalleDevolucion({ solicitud, direcciones, onCambiado }) {
 
   return (
     <div className="space-y-4">
+      {solicitud.cupon_codigo && (
+        <div className="flex gap-2.5 p-3 bg-amber-50 border border-amber-200 text-sm text-amber-800">
+          <Tag size={15} className="flex-shrink-0 mt-0.5" />
+          <p>
+            Esta compra se hizo con el cupón <span className="font-mono font-bold">{solicitud.cupon_codigo}</span>
+            {' '}(descuento de {formatCurrency(solicitud.descuento)}). Según la política de la tienda, los
+            artículos en descuento no tienen cambio ni devolución por gusto, talla o color — solo por
+            defecto de fábrica o inconsistencia con lo comprado.
+          </p>
+        </div>
+      )}
+
       <div>
         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Tipo de solicitud</p>
         <Badge variant={TIPO_BADGE[solicitud.tipo]}>{TIPO_LABEL[solicitud.tipo] || solicitud.tipo}</Badge>

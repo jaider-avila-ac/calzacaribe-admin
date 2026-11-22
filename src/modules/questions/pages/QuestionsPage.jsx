@@ -4,6 +4,7 @@ import { preguntaService } from '../../../services/preguntaService'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
 import Modal from '../../../components/ui/Modal'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
 import { formatDate } from '../../../utils/format'
 
 const FILTROS = [
@@ -23,6 +24,8 @@ export default function QuestionsPage() {
   const [respuesta, setRespuesta] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
+  const [confirmEliminarOpen, setConfirmEliminarOpen] = useState(false)
+  const [eliminando, setEliminando] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -70,13 +73,17 @@ export default function QuestionsPage() {
   }
 
   const handleEliminar = async () => {
-    if (!seleccionada || !confirm('¿Eliminar esta pregunta? El cliente ya no la verá en la tienda.')) return
+    if (!seleccionada) return
+    setEliminando(true)
     try {
       await preguntaService.eliminar(seleccionada.id)
+      setConfirmEliminarOpen(false)
       load()
       cerrar()
     } catch {
       setError('No se pudo eliminar. Intenta de nuevo.')
+    } finally {
+      setEliminando(false)
     }
   }
 
@@ -212,7 +219,7 @@ export default function QuestionsPage() {
             )}
 
             <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-              <button onClick={handleEliminar} className="btn-danger text-xs">
+              <button onClick={() => setConfirmEliminarOpen(true)} className="btn-danger text-xs">
                 <Trash2 size={13} /> Eliminar
               </button>
               {!seleccionada.eliminada && (
@@ -224,6 +231,17 @@ export default function QuestionsPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmModal
+        open={confirmEliminarOpen}
+        onClose={() => setConfirmEliminarOpen(false)}
+        onConfirm={handleEliminar}
+        title="Eliminar pregunta"
+        message="¿Eliminar esta pregunta? El cliente ya no la verá en la tienda."
+        confirmLabel="Eliminar"
+        danger
+        loading={eliminando}
+      />
     </div>
   )
 }

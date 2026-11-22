@@ -6,6 +6,8 @@ import Badge from '../../../components/ui/Badge'
 import Modal from '../../../components/ui/Modal'
 import Input from '../../../components/ui/Input'
 import EmptyState from '../../../components/ui/EmptyState'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
+import { toast } from '../../../components/ui/Toast'
 
 const MAX_VIDEO_MB = 25
 const HERO_DIM    = '1920 × 1080 px'
@@ -69,7 +71,7 @@ export default function BannersPage() {
     if (!file) return
     const esVideo = file.type.startsWith('video/')
     if (esVideo && file.size > MAX_VIDEO_MB * 1024 * 1024) {
-      alert(`El video no puede superar ${MAX_VIDEO_MB} MB.`)
+      toast.error(`El video no puede superar ${MAX_VIDEO_MB} MB.`)
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
@@ -80,12 +82,12 @@ export default function BannersPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.url) { alert('Sube un archivo antes de guardar.'); return }
+    if (!form.url) { toast.error('Sube un archivo antes de guardar.'); return }
     // Bloquear protocolos peligrosos en el enlace
     if (form.cta_link) {
       const lower = form.cta_link.trim().toLowerCase()
       if (/^(javascript|data|vbscript):/.test(lower)) {
-        alert('El enlace contiene un protocolo no permitido.')
+        toast.error('El enlace contiene un protocolo no permitido.')
         return
       }
     }
@@ -113,9 +115,20 @@ export default function BannersPage() {
     }
   }
 
-  const handleDelete = async (b) => {
-    if (!confirm(`¿Eliminar el banner "${b.titulo || 'sin título'}"?`)) return
-    await remove(b.id)
+  const [deleteTarget, setDeleteTarget] = useState(null) // banner | null
+  const [deleting, setDeleting] = useState(false)
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await remove(deleteTarget.id)
+      setDeleteTarget(null)
+    } catch (err) {
+      toast.error(err.message || 'No se pudo eliminar el banner')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   // Mueve un banner en la lista local y persiste el nuevo orden en el backend
@@ -161,7 +174,7 @@ export default function BannersPage() {
             {ordered.map((b, i) => (
               <BannerRow key={b.id} b={b}
                 onEdit={() => openEdit(b)}
-                onDelete={() => handleDelete(b)}
+                onDelete={() => setDeleteTarget(b)}
                 onMoveUp={i > 0 ? () => move(i, -1) : null}
                 onMoveDown={i < ordered.length - 1 ? () => move(i, 1) : null}
               />
@@ -215,6 +228,17 @@ export default function BannersPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar banner"
+        message={deleteTarget && `¿Eliminar el banner "${deleteTarget.titulo || 'sin título'}"?`}
+        confirmLabel="Eliminar"
+        danger
+        loading={deleting}
+      />
     </div>
   )
 }

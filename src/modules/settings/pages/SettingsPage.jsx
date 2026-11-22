@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Copy, CreditCard, Mail, Moon, Package, Pencil, Plus, Save, Store, Sun, Phone, MapPin, Trash2, Truck, Undo2 } from 'lucide-react'
 import Input from '../../../components/ui/Input'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
 import { getTheme, setTheme as saveTheme } from '../../../services/themeService'
 import { tiendaConfigService } from '../../../services/tiendaConfigService'
 import { wompiCredencialesService } from '../../../services/wompiCredencialesService'
@@ -76,13 +77,20 @@ function DireccionesDevolucionSection() {
     }
   }
 
-  const eliminar = async (id) => {
-    if (!confirm('¿Eliminar esta dirección de devolución?')) return
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const confirmEliminar = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      await direccionDevolucionService.remove(id)
+      await direccionDevolucionService.remove(deleteTarget)
+      setDeleteTarget(null)
       load()
     } catch (err) {
       setError(err.message || 'No se pudo eliminar')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -127,7 +135,7 @@ function DireccionesDevolucionSection() {
                     <button type="button" onClick={() => iniciarEdicion(dir)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title="Editar">
                       <Pencil size={14} />
                     </button>
-                    <button type="button" onClick={() => eliminar(dir.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Eliminar">
+                    <button type="button" onClick={() => setDeleteTarget(dir.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Eliminar">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -146,6 +154,17 @@ function DireccionesDevolucionSection() {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmEliminar}
+        title="Eliminar dirección"
+        message="¿Eliminar esta dirección de devolución?"
+        confirmLabel="Eliminar"
+        danger
+        loading={deleting}
+      />
     </div>
   )
 }
@@ -250,13 +269,20 @@ function EmpaquesSection({ isAdmin }) {
     }
   }
 
-  const eliminar = async (id) => {
-    if (!confirm('¿Eliminar este empaque? Si algún producto lo tiene asignado, tendrás que asignarle otro.')) return
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const confirmEliminar = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      await empaqueService.remove(id)
+      await empaqueService.remove(deleteTarget)
+      setDeleteTarget(null)
       load()
     } catch (err) {
       setError(err.message || 'No se pudo eliminar')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -307,7 +333,7 @@ function EmpaquesSection({ isAdmin }) {
                       <button type="button" onClick={() => iniciarEdicion(emp)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title="Editar">
                         <Pencil size={14} />
                       </button>
-                      <button type="button" onClick={() => eliminar(emp.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Eliminar">
+                      <button type="button" onClick={() => setDeleteTarget(emp.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Eliminar">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -327,6 +353,17 @@ function EmpaquesSection({ isAdmin }) {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmEliminar}
+        title="Eliminar empaque"
+        message="¿Eliminar este empaque? Si algún producto lo tiene asignado, tendrás que asignarle otro."
+        confirmLabel="Eliminar"
+        danger
+        loading={deleting}
+      />
     </div>
   )
 }
@@ -553,13 +590,20 @@ function TransportadorasSection({ isAdmin }) {
     }
   }
 
-  const eliminar = async (id) => {
-    if (!confirm('¿Quitar esta transportadora de la lista?')) return
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const confirmEliminar = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      await transportadoraService.remove(id)
+      await transportadoraService.remove(deleteTarget)
+      setDeleteTarget(null)
       load()
     } catch (err) {
       setError(err.message || 'No se pudo eliminar')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -600,7 +644,7 @@ function TransportadorasSection({ isAdmin }) {
                   <button type="button" onClick={() => toggleActivo(item)} className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-black" title={item.activo ? 'Desactivar' : 'Activar'}>
                     <Undo2 size={14} />
                   </button>
-                  <button type="button" onClick={() => eliminar(item.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Quitar">
+                  <button type="button" onClick={() => setDeleteTarget(item.id)} className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600" title="Quitar">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -629,6 +673,17 @@ function TransportadorasSection({ isAdmin }) {
         </div>
       )}
       {error && <p className="text-xs text-red-500">{error}</p>}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmEliminar}
+        title="Quitar transportadora"
+        message="¿Quitar esta transportadora de la lista?"
+        confirmLabel="Quitar"
+        danger
+        loading={deleting}
+      />
     </div>
   )
 }
